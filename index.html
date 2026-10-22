@@ -146,6 +146,38 @@ button{font-family:inherit;cursor:pointer}
 .wait{font-size:clamp(22px,4vw,30px);font-weight:900;line-height:1.5;text-align:center;padding:30px 10px}
 .wait .emo{font-size:72px}
 
+/* ---------- 활동 방법 ---------- */
+.guide{position:fixed;inset:0;z-index:80;background:radial-gradient(ellipse at 70% 0%,#4b3690 0%,#2b1f55 35%,#120e2a 75%);display:flex;flex-direction:column;padding:16px}
+.guide-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.guide-body{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:10px 0}
+.slide{width:min(980px,100%);animation:pop .3s ease-out;margin:auto}
+.slide h2{font-size:clamp(26px,4.6vw,44px);margin:0 0 16px;text-align:center}
+.slide .lead{font-size:clamp(18px,2.6vw,26px);text-align:center;margin:0 0 18px;color:var(--muted)}
+.gcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.gcard{background:rgba(45,36,98,.85);border:1px solid var(--line);border-radius:18px;padding:16px;font-size:clamp(16px,2vw,20px);line-height:1.5}
+.gcard .e{font-size:40px;display:block;margin-bottom:6px}
+.gcard b{color:var(--accent2)}
+.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:12px;font-size:clamp(20px,3vw,30px);font-weight:900;margin:20px 0}
+.flow span.st{background:rgba(45,36,98,.85);border:2px solid var(--line);border-radius:18px;padding:14px 18px;text-align:center}
+.flow span.st i{display:block;font-style:normal;font-size:48px}
+.gsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center}
+@media (max-width:720px){.gsplit{grid-template-columns:1fr}}
+.mini{display:grid;gap:4px;max-width:380px;margin:0 auto}
+.mini div{aspect-ratio:1/1;border-radius:8px;background:#1b1540;border:1px solid #3d3478;display:flex;align-items:center;justify-content:center;font-size:clamp(12px,2.2vw,22px);overflow:hidden}
+.mini .mh{background:var(--col);color:#0e0b24;font-size:11px;font-weight:800;aspect-ratio:auto;min-height:30px;text-align:center;line-height:1.1;overflow-wrap:anywhere}
+.mini .mr{background:var(--row);color:#0e0b24;font-size:11px;font-weight:800;aspect-ratio:auto;text-align:center;line-height:1.1;overflow-wrap:anywhere}
+.mini .hl{background:#5a2440}
+.mini .x{background:#ff3d6e}
+.mini .c0{background:none;border:none}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.vgrid div{background:rgba(45,36,98,.85);border-radius:16px;padding:14px;text-align:center;font-size:20px;font-weight:800}
+.vgrid div i{display:block;font-style:normal;font-size:44px}
+.guide-foot{display:flex;justify-content:center;align-items:center;gap:14px;padding-top:8px}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;border-radius:5px;background:#4a3f8a;display:block}
+.dots i.on{width:26px;background:var(--accent2)}
+.say{background:#16113a;border-radius:12px;padding:10px 14px;margin:8px 0;font-size:clamp(18px,2.4vw,24px);font-weight:800}
+
 /* ---------- 결과 ---------- */
 table{width:100%;border-collapse:collapse;font-size:16px}
 th,td{padding:8px 6px;border-bottom:1px solid #3a3170;text-align:center}
@@ -241,6 +273,7 @@ tr.me td{background:#3a2d75}
   </div>
 
   <div class="row center" style="margin:18px 0">
+    <button class="btn small" data-guide>📖 활동 방법 보기</button>
     <button class="btn small" id="resetDefault">↺ 기본값</button>
     <button class="btn primary big" id="createBtn">🏯 방 만들기</button>
   </div>
@@ -251,6 +284,7 @@ tr.me td{background:#3a2d75}
   <div class="topbar">
     <h1 style="margin:0">🏯 <span id="lobbyTitle"></span></h1>
     <div class="row">
+      <button class="btn small" data-guide>📖 활동 방법 보기</button>
       <button class="btn small" id="toSettings">⚙️ 표현·규칙 바꾸기</button>
       <button class="btn small" id="closeRoom">🚪 방 닫기</button>
     </div>
@@ -332,12 +366,14 @@ tr.me td{background:#3a2d75}
     <input type="text" id="sName" maxlength="12" placeholder="예) 7 또는 7 김민수" style="font-size:22px;text-align:center">
     <p class="hint">다시 들어올 때도 똑같이 쓰면 점수가 이어져요.</p>
     <button class="btn primary big" id="sJoinBtn" style="width:100%;margin-top:8px">들어가기</button>
+    <button class="btn small" data-guide style="margin-top:12px">📖 활동 방법 보기</button>
     <div class="err" id="sJoinErr"></div>
   </div>
 </section>
 
 <section id="sWait" class="hidden">
   <div class="card wait" id="sWaitBox"></div>
+  <div class="row center" style="margin-bottom:14px"><button class="btn" data-guide>📖 활동 방법 보기</button></div>
   <div class="card" style="text-align:center" id="micTestBox">
     <h2>🎤 마이크 시험</h2>
     <p class="hint">마이크를 쓸지 물어보면 꼭 '허용'! 아래 문장을 읽어 봐요.</p>
@@ -412,6 +448,19 @@ tr.me td{background:#3a2d75}
     <div class="row center" style="margin-top:10px">
       <button class="btn small" id="readCancel">↩ 다른 줄 고르기</button>
     </div>
+  </div>
+</div>
+
+<div class="guide hidden" id="guideOv">
+  <div class="guide-top">
+    <b style="font-size:18px">🥷 활동 방법</b>
+    <div class="row"><span class="hint" id="gNum"></span><button class="btn small" id="gClose">✕ 닫기</button></div>
+  </div>
+  <div class="guide-body"><div class="slide" id="gSlide"></div></div>
+  <div class="guide-foot">
+    <button class="btn" id="gPrev">◀</button>
+    <div class="dots" id="gDots"></div>
+    <button class="btn primary" id="gNext">다음 ▶</button>
   </div>
 </div>
 
@@ -3398,7 +3447,7 @@ function evText(ev, nameOf){
   return ["", "#fff"];
 }
 
-/* ---------- 결과 ---------- */
+/* ---------- 결과 (판 끝내기) ---------- */
 async function endRound(reason){
   if(H.phase !== "play") return;
   H.phase = "end";
@@ -3766,6 +3815,155 @@ async function sendResult(passed, score){
   }catch(e){ $("#heard").textContent = "📡 보내지 못했어요. 와이파이를 확인해 주세요."; READ.done = false; return; }
   setTimeout(() => { if(READ.open && READ.done){ closeRead(); renderSPlay(); } }, 1200);
 }
+
+/* =====================================================================
+   📖 활동 방법 (슬라이드 10장) — 지금 설정에 맞춰 내용이 바뀌어요
+   ===================================================================== */
+function guideCfg(){
+  if(IS_STUDENT && CFG) return CFG;
+  if(!IS_STUDENT && H && H.cfg) return H.cfg;
+  const f = IS_STUDENT ? { ...DEFAULT } : readForm();
+  const sz = IS_STUDENT ? DEFAULT.size : SIZE;
+  const c = { ...f, rows: parseLines(f.rows, f.rowTpl).slice(0, sz), cols: parseLines(f.cols, f.colTpl).slice(0, sz) };
+  if(!c.rows.length || !c.cols.length){
+    c.rows = parseLines(DEFAULT.rows, DEFAULT.rowTpl).slice(0, DEFAULT.size);
+    c.cols = parseLines(DEFAULT.cols, DEFAULT.colTpl).slice(0, DEFAULT.size);
+    c.rowTpl = DEFAULT.rowTpl; c.colTpl = DEFAULT.colTpl;
+  }
+  return c;
+}
+function miniBoard(g, o){
+  const n = Math.min(5, g.rows.length, g.cols.length);
+  let h = `<div class="mini" style="grid-template-columns:repeat(${n+1},minmax(0,1fr))"><div class="c0"></div>`;
+  for(let c=0;c<n;c++) h += `<div class="mh">${esc(g.cols[c].label)}</div>`;
+  for(let r=0;r<n;r++){
+    h += `<div class="mr">${esc(g.rows[r].label)}</div>`;
+    for(let c=0;c<n;c++){
+      const i = r*n+c;
+      let cls = "";
+      if(o.hiRow === r || o.hiCol === c) cls = "hl";
+      if(o.hiRow === r && o.hiCol === c) cls = "x";
+      h += `<div class="${cls}">${(o.mark && o.mark[i]) || ""}</div>`;
+    }
+  }
+  return h + `</div>`;
+}
+function guideSlides(){
+  const g = guideCfg() || { rows:[{label:"A",text:"A"}], cols:[{label:"B",text:"B"}], ninjas:8, hideSec:60, turnSec:30, gameMin:7, pass:80, judge:"auto", help:true, wipe:true };
+  const n = g.rows.length, N = g.ninjas, auto = g.judge === "auto";
+  const r0 = g.rows[1] || g.rows[0], c0 = g.cols[2] || g.cols[0];
+  const howto = (g.rowTpl || g.colTpl)
+    ? `<div class="gcard" style="margin-top:12px">📢 <b>판에는 단어만 있어요!</b> 읽을 때는 문장으로 읽어요.<br>${g.rowTpl ? `➡️ ${esc(g.rowTpl)}<br>` : ""}${g.colTpl ? `⬇️ ${esc(g.colTpl)}` : ""}</div>` : "";
+  return [
+    `<h2>🥷 영어 닌자 대작전</h2>
+     <p class="lead">내 닌자는 숨기고, 영어 문장을 읽어서 표창을 던져요!</p>
+     <div class="flow"><span class="st"><i>🙈</i>숨기기</span>→<span class="st"><i>🎤</i>읽기</span>→<span class="st"><i>✴️</i>표창!</span>→<span class="st"><i>⭐</i>살아남기</span></div>
+     <p class="lead" style="font-size:18px">마지막까지 살아남은 닌자가 많을수록 점수가 높아요.</p>`,
+
+    `<h2>📷 들어오기</h2>
+     <div class="gcards">
+       <div class="gcard"><span class="e">📷</span><b>QR 찍기</b><br>태블릿 카메라로 TV 화면의 QR을 찍어요. 크롬에서 열면 가장 좋아요.</div>
+       <div class="gcard"><span class="e">✍️</span><b>번호나 닉네임</b><br>예) 7 또는 7 김민수<br>다시 들어올 때 똑같이 쓰면 점수가 이어져요.</div>
+       <div class="gcard"><span class="e">🎤</span><b>마이크 허용</b><br>마이크를 써도 되냐고 물으면 꼭 '허용'을 눌러요.</div>
+       <div class="gcard"><span class="e">🧪</span><b>마이크 시험</b><br>기다리는 동안 문장을 읽어 보고 점수가 나오는지 확인해요.</div>
+     </div>`,
+
+    `<h2>🏘️ 마을 나누기</h2>
+     <div class="vgrid">${VILLAGES.slice(0,6).map(v => `<div><i>${v[0]}</i>${v[1]} 마을</div>`).join("")}</div>
+     <div class="gcards">
+       <div class="gcard">선생님이 반 친구들을 여러 <b>마을</b>로 나눠요.</div>
+       <div class="gcard">같은 마을 친구들끼리 <b>한 판</b>을 해요. 한 마을에 4~5명이 좋아요.</div>
+       <div class="gcard">마을 안에서 <b>차례는 무작위</b>로 정해져요.</div>
+     </div>`,
+
+    `<h2>🙈 닌자 숨기기</h2>
+     <div class="gsplit">
+       <div>${miniBoard(g, { mark: { 1:"🥷", 7:"🥷", 9:"🥷", 13:"🥷", 16:"🥷", 22:"🥷" } })}</div>
+       <div class="gcards" style="grid-template-columns:1fr">
+         <div class="gcard">${n}×${n} 판에 내 닌자 <b>${N}명</b>을 숨겨요. 칸을 누르면 숨고, 한 칸에 한 명!</div>
+         <div class="gcard">🌫️ 내 닌자는 <b>흐리게</b> 보여요. 옆 친구가 보면 안 돼요!</div>
+         <div class="gcard">🎲 <b>랜덤</b>을 누르면 알아서 숨겨 줘요. 다 숨기면 ✔ 를 눌러요.</div>
+         <div class="gcard">⏱ ${g.hideSec}초가 지나면 못 숨긴 닌자는 저절로 숨어요.</div>
+       </div>
+     </div>`,
+
+    `<h2>🔁 차례 돌기</h2>
+     <div class="flow" style="font-size:clamp(16px,2.4vw,22px)">
+       <span class="st">1번<br>➡️ 가로줄</span>→<span class="st">2번<br>⬇️ 세로줄<br>✴️ 발사!</span>→<span class="st">2번<br>➡️ 가로줄</span>→<span class="st">3번<br>⬇️ 세로줄<br>✴️ 발사!</span>→ …
+     </div>
+     <div class="gcards">
+       <div class="gcard">➡️ 한 친구가 왼쪽 <b>가로줄</b>을 골라 읽어요.</div>
+       <div class="gcard">⬇️ 다음 친구가 위쪽 <b>세로줄</b>을 골라 읽으면 → 표창 발사!</div>
+       <div class="gcard">🔂 세로줄을 읽은 친구가 <b>이어서 다음 가로줄</b>을 골라요.</div>
+     </div>`,
+
+    `<h2>🎤 소리 내어 읽기</h2>
+     <div class="say">➡️ 가로줄을 고르면 · ${sentenceHTML(r0)}</div>
+     <div class="say">⬇️ 세로줄을 고르면 · ${sentenceHTML(c0)}</div>
+     ${howto}
+     <div class="gcards" style="margin-top:12px">
+       <div class="gcard">✦ ${auto ? `<b>${g.pass}점</b>을 넘으면 통과! 또박또박 읽어요.` : `모둠 친구들이 듣고 <b>⭕</b>를 누르면 통과!`}</div>
+       <div class="gcard">❌ ${auto ? "점수가 모자라거나" : "❌를 받거나"} <b>${g.turnSec}초</b>가 지나면 다음 친구에게 기회가 가요.</div>
+       ${g.help ? `<div class="gcard">🍀 <b>도움 찬스</b>: 두 번 연속 미끄러지면 세 번째는 읽기만 하면 통과! 🔊 듣기도 열려요.</div>` : ""}
+     </div>`,
+
+    `<h2>✴️ 표창 발사!</h2>
+     <div class="gsplit">
+       <div>${miniBoard(g, { hiRow:1, hiCol:2, mark:{ [1*Math.min(5,n)+2]:"💀" } })}</div>
+       <div class="gcards" style="grid-template-columns:1fr">
+         <div class="gcard">가로줄과 세로줄이 <b>만나는 칸</b>에 숨은 닌자는 누구 것이든 모두 아웃! 💀</div>
+         <div class="gcard">🤐 화면에는 <b>몇 명</b> 쓰러졌는지만 나와요. 누구 닌자인지는 비밀!</div>
+         <div class="gcard">😱 내 닌자가 쓰러진 건 <b>내 태블릿</b>에만 보여요.</div>
+         <div class="gcard">🔥 한 칸에서 여럿이 쓰러지면 <b>DOUBLE · TRIPLE KILL!</b></div>
+       </div>
+     </div>`,
+
+    `<h2>🧠 닌자의 작전</h2>
+     <div class="gcards">
+       <div class="gcard"><span class="e">🙅</span><b>내 닌자 줄은 피해요</b><br>내가 고른 줄에 내 닌자가 있으면 내 닌자도 쓰러져요.</div>
+       <div class="gcard"><span class="e">🔍</span><b>친구 마음을 읽어요</b><br>친구가 어느 줄을 고를지 생각하며 숨기고, 골라요.</div>
+       <div class="gcard"><span class="e">⏱️</span><b>미리 정해 둬요</b><br>내 차례가 오기 전에 어느 줄을 고를지 정해 둬요.</div>
+       <div class="gcard"><span class="e">👂</span><b>친구 문장도 들어요</b><br>친구가 읽을 때 속으로 따라 읽으면 내 차례에 더 잘 읽어요.</div>
+     </div>`,
+
+    `<h2>⭐ 점수와 시상식</h2>
+     <p class="lead"><b style="color:var(--accent2)">점수 = 살아남은 내 닌자 수</b></p>
+     <div class="gcards">
+       <div class="gcard"><span class="e">🏁</span><b>한 판이 끝나는 때</b><br>⏰ ${g.gameMin}분이 지나면${g.wipe ? "<br>💀 마을에서 누군가의 닌자가 모두 쓰러지면" : ""}<br>🧑‍🏫 선생님이 끝내면</div>
+       <div class="gcard"><span class="e">➕</span><b>점수가 쌓여요</b><br>마을을 다시 나눠 여러 판을 하고, 점수를 모두 더해요.</div>
+       <div class="gcard"><span class="e">🏆</span><b>시상식</b><br>🎯 명사수 · 🤝 환상의 짝꿍 · 🎤 발음 마스터 · 👻 유령 닌자 · 🧲 표창 자석 · 🕊️ 평화주의 닌자 · 🏯 최강 마을 …</div>
+     </div>`,
+
+    `<h2>🤝 닌자의 약속</h2>
+     <div class="gcards">
+       <div class="gcard"><span class="e">🗣️</span><b>또박또박 크게</b><br>태블릿에 대고 또박또박 읽어요. 소리를 지르지는 않아요.</div>
+       <div class="gcard"><span class="e">🤫</span><b>친구 차례엔 조용히</b><br>내 목소리가 마이크에 들어가면 친구 점수가 떨어져요.</div>
+       <div class="gcard"><span class="e">🙈</span><b>남의 판은 안 봐요</b><br>진짜 닌자는 친구의 숨은 곳을 훔쳐보지 않아요.</div>
+       <div class="gcard"><span class="e">👏</span><b>쓰러져도 웃으며</b><br>닌자가 쓰러져도 괜찮아요. 멋진 공격엔 박수!</div>
+     </div>`
+  ];
+}
+const GUIDE = { i:0, slides:[] };
+function openGuide(){ GUIDE.slides = guideSlides(); GUIDE.i = 0; $("#guideOv").classList.remove("hidden"); renderGuide(); }
+function closeGuide(){ $("#guideOv").classList.add("hidden"); }
+function renderGuide(){
+  const n = GUIDE.slides.length, i = GUIDE.i;
+  $("#gSlide").outerHTML = `<div class="slide" id="gSlide">${GUIDE.slides[i]}</div>`;
+  $("#gNum").textContent = `${i+1} / ${n}`;
+  $("#gDots").innerHTML = GUIDE.slides.map((_,k) => `<i class="${k===i?'on':''}"></i>`).join("");
+  $("#gPrev").disabled = i === 0;
+  $("#gNext").textContent = i === n-1 ? "준비됐어요! ✦" : "다음 ▶";
+}
+document.addEventListener("click", e => { if(e.target.closest("[data-guide]")) openGuide(); });
+$("#gClose").onclick = closeGuide;
+$("#gPrev").onclick = () => { if(GUIDE.i > 0){ GUIDE.i--; renderGuide(); } };
+$("#gNext").onclick = () => { if(GUIDE.i < GUIDE.slides.length-1){ GUIDE.i++; renderGuide(); } else closeGuide(); };
+document.addEventListener("keydown", e => {
+  if($("#guideOv").classList.contains("hidden")) return;
+  if(e.key === "ArrowRight" || e.key === " "){ e.preventDefault(); $("#gNext").click(); }
+  if(e.key === "ArrowLeft") $("#gPrev").click();
+  if(e.key === "Escape") closeGuide();
+});
 
 /* ---------- 시작 ---------- */
 if(IS_STUDENT) studentInit(); else hostInit();
