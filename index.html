@@ -72,7 +72,7 @@ button{font-family:inherit;cursor:pointer}
 /* ---------- 보드 ---------- */
 .board{display:grid;gap:5px;margin:8px auto;width:100%}
 .board .corner{display:flex;align-items:center;justify-content:center;font-size:22px}
-.hd{border-radius:10px;border:2px solid transparent;font-weight:800;padding:6px 4px;font-size:clamp(12px,1.8vw,16px);color:#0e0b24;line-height:1.15;word-break:keep-all;min-height:46px}
+.hd{overflow-wrap:anywhere;border-radius:10px;border:2px solid transparent;font-weight:800;padding:6px 4px;font-size:clamp(12px,1.8vw,16px);color:#0e0b24;line-height:1.15;word-break:keep-all;min-height:46px}
 .hd.r{background:var(--row)}
 .hd.c{background:var(--col)}
 .hd:disabled{opacity:.5;cursor:default}
@@ -89,7 +89,7 @@ button{font-family:inherit;cursor:pointer}
 .cell.boom{animation:boom .7s}
 @keyframes boom{0%{transform:scale(1)}40%{transform:scale(1.25);background:#ff3d6e}100%{transform:scale(1)}}
 .board.small{gap:3px}
-.board.small .hd{min-height:26px;font-size:11px;padding:2px;border-radius:6px}
+.board.small .hd{min-height:30px;font-size:10px;padding:2px;border-radius:6px;overflow-wrap:anywhere;line-height:1.1}
 .board.small .cell{font-size:13px;border-radius:6px}
 .board.small .corner{font-size:14px}
 
@@ -113,7 +113,7 @@ button{font-family:inherit;cursor:pointer}
 .log div{padding:3px 0;border-bottom:1px dashed #33296a}
 
 /* ---------- TV 마을 카드 ---------- */
-.villages{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.villages{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
 .vcard{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:10px;position:relative;overflow:hidden}
 .vcard h3{margin:0 0 4px;font-size:18px;display:flex;justify-content:space-between}
 .vcard .vturn{font-size:15px;margin:4px 0}
@@ -127,6 +127,9 @@ button{font-family:inherit;cursor:pointer}
 /* ---------- 오버레이 ---------- */
 .overlay{position:fixed;inset:0;background:rgba(8,6,22,.9);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
 .modal{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:22px;width:min(720px,100%);text-align:center;max-height:100%;overflow:auto}
+.howto{background:#2a1f5c;border:1px dashed var(--accent2);border-radius:12px;padding:8px 12px;margin:6px 0 8px;font-size:16px;line-height:1.6}
+.howto b{color:var(--accent2)}
+.kw{color:var(--accent2);text-decoration:underline;text-underline-offset:6px}
 .sentence{font-size:clamp(24px,4.4vw,40px);font-weight:900;line-height:1.3;margin:14px 0;color:#fff;word-break:keep-all}
 .tag{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:800;color:#0e0b24}
 .tag.r{background:var(--row)} .tag.c{background:var(--col)}
@@ -186,15 +189,21 @@ tr.me td{background:#3a2d75}
     <input type="text" id="fTitle">
     <div class="grid2">
       <div>
-        <label>➡️ 가로줄 (먼저 고르는 친구가 읽어요)<br><span class="hint">한 줄에 하나씩 · <b>칸 이름 | 읽을 문장</b></span></label>
+        <label>➡️ 가로줄 (먼저 고르는 친구가 읽어요)<br><span class="hint">한 줄에 하나씩 · <b>단어만</b> 쓰거나 <b>칸 이름 | 문장</b></span></label>
         <textarea id="fRows"></textarea>
+        <label>📢 가로줄 읽는 법 (문장 틀) <span class="hint">___ 자리에 칸의 단어가 들어가요</span></label>
+        <input type="text" id="fRowTpl" placeholder="예) What are you going to do ___?">
       </div>
       <div>
-        <label>⬇️ 세로줄 (다음 친구가 읽어요)<br><span class="hint">한 줄에 하나씩 · <b>칸 이름 | 읽을 문장</b></span></label>
+        <label>⬇️ 세로줄 (다음 친구가 읽어요)<br><span class="hint">한 줄에 하나씩 · <b>단어만</b> 쓰거나 <b>칸 이름 | 문장</b></span></label>
         <textarea id="fCols"></textarea>
+        <label>📢 세로줄 읽는 법 (문장 틀) <span class="hint">___ 자리에 칸의 단어가 들어가요</span></label>
+        <input type="text" id="fColTpl" placeholder="예) I'm going to ___.">
       </div>
     </div>
     <p class="hint" id="lineHint"></p>
+    <p class="hint">💡 문장 틀을 쓰면 판에는 <b>단어만</b> 나오고, 읽을 때는 틀에 단어를 넣은 <b>문장</b>으로 읽어요. 틀이 비어 있으면 쓴 그대로 읽어요. ( | 로 문장을 직접 쓴 줄은 그 문장을 읽어요)</p>
+    <div class="howto" id="tplPreview"></div>
   </div>
 
   <div class="card">
@@ -298,6 +307,7 @@ tr.me td{background:#3a2d75}
       <button class="btn small" id="endRound">🏁 이번 판 끝내기</button>
     </div>
   </div>
+  <div class="howto hidden" id="tvHowto"></div>
   <div class="villages" id="villageCards"></div>
 </section>
 
@@ -343,6 +353,7 @@ tr.me td{background:#3a2d75}
     <span class="clock" id="sHideClock"></span>
   </div>
   <p class="sub" style="margin-bottom:6px">👆 칸을 누르면 닌자가 숨어요. 한 칸에 한 명! 🌫️ 내 닌자는 흐리게 보여요. 옆 친구가 보면 안 돼요!</p>
+  <div class="howto hidden" id="sHideHowto"></div>
   <div id="sHideBoard"></div>
   <div class="row center" style="margin-top:12px">
     <button class="btn" id="sRandom">🎲 랜덤</button>
@@ -365,6 +376,7 @@ tr.me td{background:#3a2d75}
     <div class="tbar" id="sTbar"><div id="sTbarIn"></div></div>
     <div class="order" id="sOrder"></div>
   </div>
+  <div class="howto hidden" id="sHowto"></div>
   <div id="sBoard"></div>
   <div class="card" style="margin-top:10px"><b>📜 표창 기록</b><div class="log" id="sLog"></div></div>
 </section>
@@ -379,6 +391,7 @@ tr.me td{background:#3a2d75}
 <div class="overlay hidden" id="readOv">
   <div class="modal">
     <div style="margin-top:4px"><span class="tag" id="readTag"></span></div>
+    <div class="hint hidden" id="readGuide" style="font-size:15px;margin-top:8px">📢 칸의 단어를 넣어 <b>문장으로</b> 읽어요</div>
     <div class="sentence" id="readSentence"></div>
     <div class="help hidden" id="readHelp">🍀 도움 찬스! 이번에는 읽기만 하면 통과예요. 듣기 단추도 열렸어요.</div>
     <div class="row center" style="gap:18px;margin:10px 0">
@@ -2714,23 +2727,11 @@ const FIREBASE_URL = "https://ninja-game-56862-default-rtdb.firebaseio.com";
 
 /* 기본 표현 — 형식: 칸 이름 | 문장 */
 const DEFAULT = {
-  title: "Where Are You From?",
-  rows: [
-    "Tom | Nice to meet you, Tom. Where are you from?",
-    "Amy | Nice to meet you, Amy. Where are you from?",
-    "Mia | Nice to meet you, Mia. Where are you from?",
-    "Sam | Nice to meet you, Sam. Where are you from?",
-    "Peter | Nice to meet you, Peter. Where are you from?",
-    "Kate | Nice to meet you, Kate. Where are you from?"
-  ].join("\n"),
-  cols: [
-    "Korea | I'm from Korea.",
-    "Vietnam | I'm from Vietnam.",
-    "India | I'm from India.",
-    "Canada | I'm from Canada.",
-    "France | I'm from France.",
-    "Japan | I'm from Japan."
-  ].join("\n"),
+  title: "What Are You Going to Do?",
+  rows: ["this weekend","tomorrow","after school","this summer","on Sunday","this winter"].join("\n"),
+  cols: ["go camping","visit my grandparents","play soccer","watch a movie","read books","learn to swim"].join("\n"),
+  rowTpl: "What are you going to do ___?",   // 가로줄 읽는 법 (___ 자리에 단어)
+  colTpl: "I'm going to ___.",               // 세로줄 읽는 법
   size: 6,        // 판 크기 (4, 5, 6)
   ninjas: 12,     // 1인당 닌자 수 (판의 약 1/3 추천)
   hideSec: 60, turnSec: 30, gameMin: 7, pass: 80,
@@ -2827,11 +2828,27 @@ function setAt(root, keys, val){
   return root;
 }
 
+/* ---------- 문장 표시 ---------- */
+function sentenceHTML(item){
+  const t = esc(item.text);
+  if(!item.word) return t;
+  const w = esc(item.word), i = t.toLowerCase().indexOf(w.toLowerCase());
+  return i < 0 ? t : t.slice(0,i) + `<span class="kw">${t.slice(i, i+w.length)}</span>` + t.slice(i+w.length);
+}
+function howtoHTML(cfg){
+  const tplShow = tpl => esc(tpl).replace(/_{2,}|\{\}/, "<b>___</b>");
+  const parts = [];
+  if(cfg.rowTpl) parts.push(`➡️ 가로줄: ${tplShow(cfg.rowTpl)}`);
+  if(cfg.colTpl) parts.push(`⬇️ 세로줄: ${tplShow(cfg.colTpl)}`);
+  return parts.length ? `📢 <b>이렇게 문장으로 읽어요</b><br>${parts.join("<br>")}` : "";
+}
+function setHowto(sel, cfg){ const hh = howtoHTML(cfg); $(sel).innerHTML = hh; $(sel).classList.toggle("hidden", !hh); }
+
 /* ---------- 보드 그리기 ---------- */
 let CFG = null;
 function boardHTML(o){
   const R = CFG.rows.length, C = CFG.cols.length;
-  let h = `<div class="board ${o.small?'small':''}" style="grid-template-columns:minmax(${o.small?44:64}px,auto) repeat(${C},1fr)"><div class="corner">🥷</div>`;
+  let h = `<div class="board ${o.small?'small':''}" style="grid-template-columns:${o.small?'54px':'minmax(64px,auto)'} repeat(${C},minmax(0,1fr))"><div class="corner">🥷</div>`;
   CFG.cols.forEach((c,j) => h += `<button class="hd c ${o.canCol?'can':''}" data-col="${j}" ${o.canCol?'':'disabled'}>${o.small?'':'⬇️ '}${esc(c.label)}</button>`);
   for(let r=0; r<R; r++){
     const sel = o.selRow === r;
@@ -2931,15 +2948,22 @@ if(window.speechSynthesis) speechSynthesis.getVoices();
    ##################################################################### */
 let H = null; // 호스트 상태
 
-function parseLines(txt){
+function fillTpl(tpl, word){
+  tpl = (tpl || "").trim();
+  if(!tpl) return word;
+  let s = /_{2,}|\{\}/.test(tpl) ? tpl.replace(/_{2,}|\{\}/, word) : tpl + " " + word;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function parseLines(txt, tpl){
   return txt.split(/\n/).map(l => l.trim()).filter(Boolean).map(l => {
     const i = l.indexOf("|");
-    if(i < 0) return { label: l.length > 14 ? l.slice(0,13)+"…" : l, text: l };
+    if(i < 0) return tpl && tpl.trim() ? { label: l, text: fillTpl(tpl, l), word: l } : { label: l.length > 14 ? l.slice(0,13)+"…" : l, text: l };
     return { label: l.slice(0,i).trim() || l.slice(i+1).trim().slice(0,12), text: l.slice(i+1).trim() };
   });
 }
 function fillForm(c){
   $("#fTitle").value = c.title; $("#fRows").value = c.rows; $("#fCols").value = c.cols;
+  $("#fRowTpl").value = c.rowTpl || ""; $("#fColTpl").value = c.colTpl || "";
   setSize(c.size || 5);
   $("#fNinjas").value = c.ninjas; $("#fHide").value = c.hideSec; $("#fTurn").value = c.turnSec;
   $("#fGame").value = c.gameMin; $("#fPass").value = c.pass; $("#fJudge").value = c.judge;
@@ -2950,6 +2974,7 @@ function readForm(){
   return {
     title: $("#fTitle").value.trim() || "영어 닌자 대작전",
     rows: $("#fRows").value, cols: $("#fCols").value,
+    rowTpl: $("#fRowTpl").value.trim(), colTpl: $("#fColTpl").value.trim(),
     size: SIZE, ninjas: +$("#fNinjas").value || 8, hideSec: +$("#fHide").value || 60, turnSec: +$("#fTurn").value || 30,
     gameMin: +$("#fGame").value || 7, pass: +$("#fPass").value || 80,
     judge: $("#fJudge").value, listen: $("#fListen").checked,
@@ -2966,6 +2991,8 @@ function setSize(s){
 function updateHint(){
   const R = parseLines($("#fRows").value).length, C = parseLines($("#fCols").value).length;
   $("#ninjaHint").textContent = `(${SIZE}×${SIZE}판 · 추천 ${recNinjas(SIZE)}명)`;
+  const pr = parseLines($("#fRows").value, $("#fRowTpl").value)[0], pc = parseLines($("#fCols").value, $("#fColTpl").value)[0];
+  $("#tplPreview").innerHTML = `👀 미리보기 · ➡️ ${pr ? sentenceHTML(pr) : "-"}<br>👀 미리보기 · ⬇️ ${pc ? sentenceHTML(pc) : "-"}`;
   const warn = [];
   if(R < SIZE) warn.push(`가로줄이 ${SIZE - R}줄 더 필요해요`);
   if(C < SIZE) warn.push(`세로줄이 ${SIZE - C}줄 더 필요해요`);
@@ -2991,6 +3018,7 @@ async function refreshSets(selectName){
 function loadSet(){
   const s = SETS[$("#savedSets").value]; if(!s) return;
   $("#fTitle").value = s.title || ""; $("#fRows").value = s.rows || ""; $("#fCols").value = s.cols || "";
+  $("#fRowTpl").value = s.rowTpl || ""; $("#fColTpl").value = s.colTpl || "";
   updateHint();
   $("#setMsg").textContent = `📂 '${s.name || $("#savedSets").value}'을(를) 불러왔어요.`;
 }
@@ -2999,7 +3027,7 @@ async function saveSet(){
   if(!parseLines(f.rows).length || !parseLines(f.cols).length) return alert("가로줄과 세로줄을 먼저 써 주세요.");
   const name = (prompt("저장할 이름 (예: 6학년 3단원)", $("#savedSets").value || f.title) || "").trim(); if(!name) return;
   if(SETS[name] && !confirm(`'${name}'이(가) 이미 있어요. 새 내용으로 바꿀까요?`)) return;
-  const set = { name, title:f.title, rows:f.rows, cols:f.cols, t: Date.now() };
+  const set = { name, title:f.title, rows:f.rows, cols:f.cols, rowTpl:f.rowTpl, colTpl:f.colTpl, t: Date.now() };
   const local = store.get("nj-sets", {}); local[name] = set; store.set("nj-sets", local);
   let cloud = false;
   const url = setsUrl();
@@ -3026,7 +3054,7 @@ function hostInit(){
   if(FIREBASE_URL) $("#dbBox").classList.add("hidden");
   const last = store.get("nj-host", null);
   if(last && last.code){ $("#resumeBox").classList.remove("hidden"); $("#resumeTxt").textContent = `지난번 방 ${last.code}이(가) 있어요.`; }
-  ["#fRows","#fCols"].forEach(s => $(s).addEventListener("input", updateHint));
+  ["#fRows","#fCols","#fRowTpl","#fColTpl"].forEach(s => $(s).addEventListener("input", updateHint));
   $("#saveSet").onclick = saveSet;
   $("#loadSet").onclick = loadSet;
   $("#savedSets").onchange = loadSet;
@@ -3067,7 +3095,7 @@ function hostInit(){
 
 function validateCfg(){
   const f = readForm();
-  const allR = parseLines(f.rows), allC = parseLines(f.cols);
+  const allR = parseLines(f.rows, f.rowTpl), allC = parseLines(f.cols, f.colTpl);
   if(allR.length < SIZE) return [null, `${SIZE}×${SIZE} 판에는 가로줄이 ${SIZE}줄 필요해요. (지금 ${allR.length}줄)`];
   if(allC.length < SIZE) return [null, `${SIZE}×${SIZE} 판에는 세로줄이 ${SIZE}줄 필요해요. (지금 ${allC.length}줄)`];
   const rows = allR.slice(0, SIZE), cols = allC.slice(0, SIZE);
@@ -3235,6 +3263,7 @@ function startPlay(resume){
   DB.put(`rooms/${H.code}/state`, H.state);
   $("#playTitle").textContent = "🥷 " + H.cfg.title;
   $("#playCode").textContent = H.code;
+  setHowto("#tvHowto", H.cfg);
   show("hPlay"); renderVillages();
 }
 function pubV(v){ const { deadline, ...rest } = v; return rest; }
@@ -3560,11 +3589,12 @@ function studentUpdate(first){
     if(S.hideSent){
       show("sWait");
       $("#sWaitBox").innerHTML = `<div class="emo">✅</div>다 숨겼어요!<br><span class="hint" style="font-size:18px">친구들이 숨길 때까지 기다려요. 옆 친구 판은 보지 않아요 🙈</span>`;
-    } else { show("sHide"); renderSHide(); }
+    } else { setHowto("#sHideHowto", CFG); show("sHide"); renderSHide(); }
     return;
   }
   if(st.phase === "play"){
     if(S.playId !== st.playId){ S.playId = st.playId; S.gameEnd = Date.now() + (st.gameMs||0); }
+    setHowto("#sHowto", CFG);
     show("sPlay"); renderSPlay(first);
     return;
   }
@@ -3679,7 +3709,8 @@ function openRead(type, idx){
   Object.assign(READ, { open:true, type, idx, done:false, helped: cv.helped, turnId: cv.v.turnId });
   $("#readTag").className = "tag " + (type === "row" ? "r" : "c");
   $("#readTag").textContent = (type === "row" ? "➡️ 가로줄 · " : "⬇️ 세로줄 · ") + item.label;
-  $("#readSentence").textContent = item.text;
+  $("#readSentence").innerHTML = sentenceHTML(item);
+  $("#readGuide").classList.toggle("hidden", !item.word);
   $("#readHelp").classList.toggle("hidden", !READ.helped);
   $("#listenBtn").classList.toggle("hidden", !(CFG.listen || READ.helped));
   const manual = CFG.judge === "manual";
