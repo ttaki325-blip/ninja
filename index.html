@@ -43,7 +43,7 @@ textarea,input[type=text],input[type=number],select{
   width:100%;background:#16113a;color:var(--text);border:1px solid var(--line);
   border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit
 }
-textarea{min-height:150px;line-height:1.5;resize:vertical}
+textarea{min-height:200px;line-height:1.5;resize:vertical}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .center{justify-content:center;text-align:center}
 .opt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #3a3170}
@@ -60,6 +60,7 @@ button{font-family:inherit;cursor:pointer}
 .btn.small{padding:8px 12px;font-size:14px;border-radius:10px}
 .btn.big{font-size:22px;padding:16px 26px}
 .hidden{display:none!important}
+.seg button.on{background:var(--accent2);color:#1a1240;border-color:var(--accent2)}
 .err{color:var(--bad);font-weight:700;margin-top:8px}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#2a2160;border:1px solid #3a3170;font-size:16px;margin:3px}
 .chip button{background:none;border:none;color:var(--muted);font-size:14px;padding:0}
@@ -180,6 +181,7 @@ tr.me td{background:#3a2d75}
       <button class="btn small" id="saveSet">💾 내 표현 저장</button>
       <button class="btn small" id="delSet">🗑 삭제</button>
     </div>
+    <div class="hint" id="setMsg" style="margin-top:6px">💾 저장한 표현은 Firebase에도 보관돼서 다른 컴퓨터에서도 불러올 수 있어요.</div>
     <label>제목</label>
     <input type="text" id="fTitle">
     <div class="grid2">
@@ -192,14 +194,25 @@ tr.me td{background:#3a2d75}
         <textarea id="fCols"></textarea>
       </div>
     </div>
-    <p class="hint">줄 수가 판 크기가 돼요. 예) 가로 5줄 × 세로 5줄 = 5×5 판 (2~8줄)</p>
+    <p class="hint" id="lineHint"></p>
   </div>
 
   <div class="card">
     <h2>⚙️ 규칙</h2>
     <div class="grid2">
       <div>
-        <div class="opt"><span>닌자 수 <span class="hint" id="ninjaHint"></span></span><input type="number" id="fNinjas" min="1" max="40"></div>
+        <div class="opt"><span>판 크기</span>
+          <div class="row seg" id="sizeBtns">
+            <button class="btn small" data-size="4">4×4</button>
+            <button class="btn small" data-size="5">5×5</button>
+            <button class="btn small" data-size="6">6×6</button>
+          </div></div>
+        <div class="opt"><span>닌자 수 <span class="hint" id="ninjaHint"></span></span>
+          <div class="row" style="gap:6px;flex-wrap:nowrap">
+            <button class="btn small" id="nMinus">−</button>
+            <input type="number" id="fNinjas" min="1" max="30" style="width:70px">
+            <button class="btn small" id="nPlus">+</button>
+          </div></div>
         <div class="opt"><span>닌자 숨기기 시간(초)</span><input type="number" id="fHide" min="15" max="180"></div>
         <div class="opt"><span>한 차례 시간(초) <span class="hint">줄 고르기+읽기</span></span><input type="number" id="fTurn" min="10" max="120"></div>
         <div class="opt"><span>한 판 시간(분)</span><input type="number" id="fGame" min="1" max="40"></div>
@@ -2707,16 +2720,20 @@ const DEFAULT = {
     "Amy | Nice to meet you, Amy. Where are you from?",
     "Mia | Nice to meet you, Mia. Where are you from?",
     "Sam | Nice to meet you, Sam. Where are you from?",
-    "Peter | Nice to meet you, Peter. Where are you from?"
+    "Peter | Nice to meet you, Peter. Where are you from?",
+    "Kate | Nice to meet you, Kate. Where are you from?"
   ].join("\n"),
   cols: [
     "Korea | I'm from Korea.",
     "Vietnam | I'm from Vietnam.",
     "India | I'm from India.",
     "Canada | I'm from Canada.",
-    "France | I'm from France."
+    "France | I'm from France.",
+    "Japan | I'm from Japan."
   ].join("\n"),
-  ninjas: 8, hideSec: 60, turnSec: 30, gameMin: 7, pass: 80,
+  size: 6,        // 판 크기 (4, 5, 6)
+  ninjas: 12,     // 1인당 닌자 수 (판의 약 1/3 추천)
+  hideSec: 60, turnSec: 30, gameMin: 7, pass: 80,
   judge: "auto", listen: false, help: true, wipe: true
 };
 const VILLAGES = [["🐉","용"],["🐯","호랑이"],["🦊","여우"],["🐺","늑대"],["🦅","독수리"],["🐼","판다"],["🐻","곰"],["🐬","돌고래"]];
@@ -2923,6 +2940,7 @@ function parseLines(txt){
 }
 function fillForm(c){
   $("#fTitle").value = c.title; $("#fRows").value = c.rows; $("#fCols").value = c.cols;
+  setSize(c.size || 5);
   $("#fNinjas").value = c.ninjas; $("#fHide").value = c.hideSec; $("#fTurn").value = c.turnSec;
   $("#fGame").value = c.gameMin; $("#fPass").value = c.pass; $("#fJudge").value = c.judge;
   $("#fListen").checked = c.listen; $("#fHelp").checked = c.help; $("#fWipe").checked = c.wipe;
@@ -2932,38 +2950,95 @@ function readForm(){
   return {
     title: $("#fTitle").value.trim() || "영어 닌자 대작전",
     rows: $("#fRows").value, cols: $("#fCols").value,
-    ninjas: +$("#fNinjas").value || 8, hideSec: +$("#fHide").value || 60, turnSec: +$("#fTurn").value || 30,
+    size: SIZE, ninjas: +$("#fNinjas").value || 8, hideSec: +$("#fHide").value || 60, turnSec: +$("#fTurn").value || 30,
     gameMin: +$("#fGame").value || 7, pass: +$("#fPass").value || 80,
     judge: $("#fJudge").value, listen: $("#fListen").checked,
     help: $("#fHelp").checked, wipe: $("#fWipe").checked
   };
 }
+let SIZE = 5;
+const recNinjas = s => Math.max(1, Math.round(s*s/3));
+function setSize(s){
+  SIZE = s;
+  document.querySelectorAll("#sizeBtns button").forEach(b => b.classList.toggle("on", +b.dataset.size === s));
+  updateHint();
+}
 function updateHint(){
   const R = parseLines($("#fRows").value).length, C = parseLines($("#fCols").value).length;
-  $("#ninjaHint").textContent = R && C ? `(${R}×${C}판 · 추천 ${Math.max(1,Math.round(R*C/3))}명)` : "";
+  $("#ninjaHint").textContent = `(${SIZE}×${SIZE}판 · 추천 ${recNinjas(SIZE)}명)`;
+  const warn = [];
+  if(R < SIZE) warn.push(`가로줄이 ${SIZE - R}줄 더 필요해요`);
+  if(C < SIZE) warn.push(`세로줄이 ${SIZE - C}줄 더 필요해요`);
+  $("#lineHint").innerHTML = `지금 가로 ${R}줄 · 세로 ${C}줄 → <b>${SIZE}×${SIZE} 판</b>에는 앞에서부터 ${SIZE}줄씩 써요. (판 크기는 아래 규칙에서 바꿔요)` +
+    (warn.length ? `<br><b style="color:var(--bad)">⚠️ ${warn.join(", ")}.</b>` : (R > SIZE || C > SIZE ? `<br>남는 줄은 이번 판에 안 나와요.` : ""));
 }
-function refreshSets(){
-  const sets = store.get("nj-sets", {});
-  const names = Object.keys(sets);
-  $("#savedSets").innerHTML = names.length ? names.map(n => `<option>${esc(n)}</option>`).join("") : `<option value="">(저장된 표현 없음)</option>`;
+/* ---------- 표현 저장 (이 컴퓨터 + Firebase) ---------- */
+let SETS = {};
+const setsUrl = () => (FIREBASE_URL || $("#fDb").value || "").trim().replace(/\/+$/,"");
+async function refreshSets(selectName){
+  SETS = { ...store.get("nj-sets", {}) };
+  const url = setsUrl();
+  if(/^https?:\/\//.test(url)){
+    try{
+      const r = await fetch(`${url}/rooms/_sets.json`);
+      if(r.ok){ const o = (await r.json()) || {}; Object.values(o).forEach(s => { if(s && s.name) SETS[s.name] = s; }); }
+    }catch(e){}
+  }
+  const names = Object.keys(SETS).sort((a,b) => a.localeCompare(b, "ko", {numeric:true}));
+  $("#savedSets").innerHTML = names.length ? `<option value="">— 저장한 표현 고르기 (${names.length}개) —</option>` + names.map(n => `<option>${esc(n)}</option>`).join("") : `<option value="">(저장된 표현 없음)</option>`;
+  if(selectName) $("#savedSets").value = selectName;
+}
+function loadSet(){
+  const s = SETS[$("#savedSets").value]; if(!s) return;
+  $("#fTitle").value = s.title || ""; $("#fRows").value = s.rows || ""; $("#fCols").value = s.cols || "";
+  updateHint();
+  $("#setMsg").textContent = `📂 '${s.name || $("#savedSets").value}'을(를) 불러왔어요.`;
+}
+async function saveSet(){
+  const f = readForm();
+  if(!parseLines(f.rows).length || !parseLines(f.cols).length) return alert("가로줄과 세로줄을 먼저 써 주세요.");
+  const name = (prompt("저장할 이름 (예: 6학년 3단원)", $("#savedSets").value || f.title) || "").trim(); if(!name) return;
+  if(SETS[name] && !confirm(`'${name}'이(가) 이미 있어요. 새 내용으로 바꿀까요?`)) return;
+  const set = { name, title:f.title, rows:f.rows, cols:f.cols, t: Date.now() };
+  const local = store.get("nj-sets", {}); local[name] = set; store.set("nj-sets", local);
+  let cloud = false;
+  const url = setsUrl();
+  if(/^https?:\/\//.test(url)){
+    try{ const r = await fetch(`${url}/rooms/_sets/${hashName(name)}.json`, { method:"PUT", body: JSON.stringify(set) }); cloud = r.ok; }catch(e){}
+  }
+  await refreshSets(name);
+  $("#setMsg").textContent = cloud ? `☁️ '${name}' 저장했어요. 다른 컴퓨터에서도 불러올 수 있어요.` : `💾 '${name}'을(를) 이 컴퓨터에 저장했어요. (Firebase 주소를 넣으면 온라인에도 저장돼요)`;
+}
+async function delSet(){
+  const n = $("#savedSets").value; if(!SETS[n] || !confirm(`'${n}'을(를) 지울까요?`)) return;
+  const local = store.get("nj-sets", {}); delete local[n]; store.set("nj-sets", local);
+  const url = setsUrl();
+  if(/^https?:\/\//.test(url)){ try{ await fetch(`${url}/rooms/_sets/${hashName(n)}.json`, { method:"DELETE" }); }catch(e){} }
+  await refreshSets();
+  $("#setMsg").textContent = `🗑 '${n}'을(를) 지웠어요.`;
 }
 
 function hostInit(){
   show("hSetup");
   fillForm({ ...DEFAULT, ...store.get("nj-cfg2", {}) });
-  refreshSets();
   $("#fDb").value = DBURL;
+  refreshSets();
   if(FIREBASE_URL) $("#dbBox").classList.add("hidden");
   const last = store.get("nj-host", null);
   if(last && last.code){ $("#resumeBox").classList.remove("hidden"); $("#resumeTxt").textContent = `지난번 방 ${last.code}이(가) 있어요.`; }
   ["#fRows","#fCols"].forEach(s => $(s).addEventListener("input", updateHint));
-  $("#saveSet").onclick = () => {
-    const f = readForm(); const name = prompt("저장할 이름 (예: 6학년 3단원)", f.title); if(!name) return;
-    const sets = store.get("nj-sets", {}); sets[name] = { title:f.title, rows:f.rows, cols:f.cols };
-    store.set("nj-sets", sets); refreshSets(); $("#savedSets").value = name;
-  };
-  $("#loadSet").onclick = () => { const s = store.get("nj-sets", {})[$("#savedSets").value]; if(!s) return; $("#fTitle").value = s.title; $("#fRows").value = s.rows; $("#fCols").value = s.cols; updateHint(); };
-  $("#delSet").onclick = () => { const n = $("#savedSets").value; const sets = store.get("nj-sets", {}); if(!sets[n] || !confirm(`'${n}'을(를) 지울까요?`)) return; delete sets[n]; store.set("nj-sets", sets); refreshSets(); };
+  $("#saveSet").onclick = saveSet;
+  $("#loadSet").onclick = loadSet;
+  $("#savedSets").onchange = loadSet;
+  $("#delSet").onclick = delSet;
+  $("#fDb").addEventListener("change", () => refreshSets());
+  $("#sizeBtns").addEventListener("click", e => {
+    const b = e.target.closest("[data-size]"); if(!b) return;
+    setSize(+b.dataset.size); $("#fNinjas").value = recNinjas(SIZE); updateHint();
+  });
+  const clampN = n => Math.max(1, Math.min(SIZE*SIZE - 1, n));
+  $("#nMinus").onclick = () => $("#fNinjas").value = clampN((+$("#fNinjas").value || 1) - 1);
+  $("#nPlus").onclick = () => $("#fNinjas").value = clampN((+$("#fNinjas").value || 0) + 1);
   $("#resetDefault").onclick = () => { if(confirm("기본값으로 되돌릴까요?")) fillForm(DEFAULT); };
   $("#createBtn").onclick = hostCreateOrSave;
   $("#resumeBtn").onclick = () => hostResume(store.get("nj-host",{}).code);
@@ -2992,9 +3067,10 @@ function hostInit(){
 
 function validateCfg(){
   const f = readForm();
-  const rows = parseLines(f.rows), cols = parseLines(f.cols);
-  if(rows.length < 2 || rows.length > 8) return [null, "가로줄은 2~8줄이어야 해요."];
-  if(cols.length < 2 || cols.length > 8) return [null, "세로줄은 2~8줄이어야 해요."];
+  const allR = parseLines(f.rows), allC = parseLines(f.cols);
+  if(allR.length < SIZE) return [null, `${SIZE}×${SIZE} 판에는 가로줄이 ${SIZE}줄 필요해요. (지금 ${allR.length}줄)`];
+  if(allC.length < SIZE) return [null, `${SIZE}×${SIZE} 판에는 세로줄이 ${SIZE}줄 필요해요. (지금 ${allC.length}줄)`];
+  const rows = allR.slice(0, SIZE), cols = allC.slice(0, SIZE);
   if(f.ninjas < 1 || f.ninjas >= rows.length*cols.length) return [null, `닌자 수는 1 ~ ${rows.length*cols.length-1}명 사이로 정해 주세요.`];
   store.set("nj-cfg2", f);
   return [{ ...f, rows, cols }, null];
