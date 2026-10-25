@@ -60,6 +60,9 @@ button{font-family:inherit;cursor:pointer}
 .btn.small{padding:8px 12px;font-size:14px;border-radius:10px}
 .btn.big{font-size:22px;padding:16px 26px}
 .hidden{display:none!important}
+.gpick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:440px;margin:10px auto 0}
+.gpick button{font-size:26px;font-weight:900;padding:16px 0;border-radius:16px;background:var(--card2);color:#fff;border:2px solid var(--line)}
+.gpick button.on{background:var(--accent2);color:#1a1240;border-color:var(--accent2)}
 .seg button.on{background:var(--accent2);color:#1a1240;border-color:var(--accent2)}
 .err{color:var(--bad);font-weight:700;margin-top:8px}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#2a2160;border:1px solid #3a3170;font-size:16px;margin:3px}
@@ -184,6 +187,10 @@ th,td{padding:8px 6px;border-bottom:1px solid #3a3170;text-align:center}
 th{color:var(--muted);font-weight:700}
 tr.first td{color:var(--accent2);font-weight:900}
 tr.me td{background:#3a2d75}
+.myaward{margin:18px auto 0;max-width:420px;background:linear-gradient(180deg,#3a2d75,#2a2160);border:3px solid var(--accent2);border-radius:22px;padding:16px;animation:pop .5s ease-out}
+.myaward .ma-e{font-size:72px;line-height:1.1}
+.myaward .ma-t{font-size:30px;color:var(--accent2)}
+.myaward .ma-d{font-size:17px;font-weight:600;color:var(--text)}
 .awards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
 .award{background:var(--card2);border-radius:14px;padding:12px}
 .award b{display:block;font-size:18px;margin-bottom:4px}
@@ -307,15 +314,19 @@ tr.me td{background:#3a2d75}
   <div class="card">
     <div class="row" style="justify-content:space-between">
       <h2 style="margin:0">🏘️ 마을 나누기</h2>
+      <div class="row seg" id="gModeBtns">
+        <button class="btn small" data-gmode="random">🎲 무작위로</button>
+        <button class="btn small" data-gmode="group">🪑 모둠대로</button>
+      </div>
       <div class="row">
-        <span>마을 수</span>
+        <span id="vCountLabel">마을 수</span>
         <button class="btn small" id="vMinus">−</button>
         <b id="vCount" style="font-size:22px;min-width:30px;text-align:center"></b>
         <button class="btn small" id="vPlus">+</button>
         <button class="btn" id="divideBtn">🎲 마을 나누기</button>
       </div>
     </div>
-    <p class="hint">한 마을 4~5명이 좋아요. 마을마다 따로 한 판을 해요.</p>
+    <p class="hint" id="gModeHint">한 마을 4~5명이 좋아요. 마을마다 따로 한 판을 해요.</p>
     <div class="vlist" id="villageList"></div>
   </div>
   <div class="row center"><button class="btn primary big" id="startHide" disabled>🥷 닌자 숨기기 시작</button></div>
@@ -373,6 +384,11 @@ tr.me td{background:#3a2d75}
 
 <section id="sWait" class="hidden">
   <div class="card wait" id="sWaitBox"></div>
+  <div class="card hidden" id="sGroupBox" style="text-align:center">
+    <h2>🪑 내 모둠 번호를 골라요</h2>
+    <div class="hint" style="font-size:15px">지금 앉아 있는 모둠의 번호를 눌러요. 같은 모둠 친구들이 한 마을이 돼요.</div>
+    <div class="gpick" id="sGroupBtns"></div>
+  </div>
   <div class="row center" style="margin-bottom:14px"><button class="btn" data-guide>📖 활동 방법 보기</button></div>
   <div class="card" style="text-align:center" id="micTestBox">
     <h2>🎤 마이크 시험</h2>
@@ -2787,7 +2803,8 @@ const DEFAULT = {
   judge: "auto", listen: false, help: true, wipe: true
 };
 const VILLAGES = [["🐉","용"],["🐯","호랑이"],["🦊","여우"],["🐺","늑대"],["🦅","독수리"],["🐼","판다"],["🐻","곰"],["🐬","돌고래"]];
-const vName = i => `${VILLAGES[i%8][0]} ${VILLAGES[i%8][1]} 마을`;
+let VNAMES = null; // 모둠대로 나눌 때: ["🐉 1모둠", ...]
+const vName = i => (VNAMES && VNAMES[i]) || `${VILLAGES[i%8][0]} ${VILLAGES[i%8][1]} 마을`;
 
 /* ---------- 공통 도구 ---------- */
 const store = {
@@ -3121,8 +3138,9 @@ function hostInit(){
   $("#resumeBtn").onclick = () => hostResume(store.get("nj-host",{}).code);
   $("#resumeForget").onclick = () => { store.del("nj-host"); $("#resumeBox").classList.add("hidden"); };
 
-  $("#vMinus").onclick = () => { H.vCount = Math.max(1, H.vCount-1); renderLobby(); };
-  $("#vPlus").onclick = () => { H.vCount = Math.min(8, H.vCount+1); renderLobby(); };
+  $("#vMinus").onclick = () => { H.vCount = Math.max(H.groupMode === "group" ? 2 : 1, H.vCount-1); if(H.groupMode === "group") DB.patch(`rooms/${H.code}/state`, gstate()); renderLobby(); };
+  $("#vPlus").onclick = () => { H.vCount = Math.min(8, H.vCount+1); if(H.groupMode === "group") DB.patch(`rooms/${H.code}/state`, gstate()); renderLobby(); };
+  $("#gModeBtns").addEventListener("click", e => { const b = e.target.closest("[data-gmode]"); if(b && H.phase === "lobby") setGroupMode(b.dataset.gmode); });
   $("#divideBtn").onclick = divideVillages;
   $("#startHide").onclick = startHide;
   $("#forceStart").onclick = () => finishHide();
@@ -3137,7 +3155,7 @@ function hostInit(){
     const pid = b.dataset.kick;
     if(!confirm(`${H.players[pid]?.name}을(를) 내보낼까요?`)) return;
     DB.del(`rooms/${H.code}/players/${pid}`);
-    if(H.villageOf[pid] != null){ delete H.villageOf[pid]; DB.put(`rooms/${H.code}/state/villageOf`, H.villageOf); }
+    if(H.villageOf[pid] != null){ delete H.villageOf[pid]; DB.patch(`rooms/${H.code}/state`, { villageOf: H.villageOf }); }
   });
   setInterval(hostTick, 250);
 }
@@ -3188,6 +3206,9 @@ function startHost(code, cfg, players, state, totals){
     phase: "lobby", seen: new Set(), hideDeadline: 0, gameEndAt: 0, round: state.round || 1, lastBanners: {}
   };
   CFG = cfg;
+  H.groupMode = state.groupMode || store.get("nj-gmode", "random");
+  H.vNames = state.vNames || null; VNAMES = H.vNames;
+  if(state.groupCount) H.vCount = state.groupCount;
   DB.listen(`rooms/${code}/players`, m => { H.players = m || {}; if(H.phase === "lobby") renderLobby(); });
   DB.listen(`rooms/${code}/hides`, m => { H.hidesRaw = m || {}; if(H.phase === "hide"){ renderHideProgress(); checkAllHidden(); } });
   DB.listen(`rooms/${code}/actions`, m => {
@@ -3197,6 +3218,7 @@ function startHost(code, cfg, players, state, totals){
   toLobby(true);
 }
 
+function gstate(){ return { vNames: H.vNames || null, groupMode: H.groupMode || "random", groupCount: H.vCount || 1 }; }
 function joinUrl(){
   const base = location.href.split("?")[0].split("#")[0];
   return `${base}?room=${H.code}` + (FIREBASE_URL ? "" : `&db=${encodeURIComponent(DBURL)}`);
@@ -3204,7 +3226,7 @@ function joinUrl(){
 function toLobby(first){
   if(!first){
     H.round++;
-    H.state = { phase:"lobby", round:H.round, villageOf:H.villageOf };
+    H.state = { phase:"lobby", round:H.round, villageOf:H.villageOf, ...gstate() };
     DB.put(`rooms/${H.code}/state`, H.state);
     DB.del(`rooms/${H.code}/hides`); DB.del(`rooms/${H.code}/v`);
   }
@@ -3218,20 +3240,66 @@ function toLobby(first){
     const qr = qrcode(0, "M"); qr.addData(url); qr.make();
     $("#qrBox").innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
   }catch(e){ $("#qrBox").textContent = "QR을 만들지 못했어요"; }
-  if(!H.vCount) H.vCount = Math.max(1, Math.round(Object.keys(H.players).length / 4.5)) || 1;
+  if(!H.vCount) H.vCount = H.groupMode === "group" ? 6 : (Math.max(1, Math.round(Object.keys(H.players).length / 4.5)) || 1);
+  if(first) DB.patch(`rooms/${H.code}/state`, gstate());
   show("hLobby"); renderLobby();
 }
 
+const myGroup = (pid) => { const g = +H.players[pid]?.group; return g >= 1 && g <= H.vCount ? g : null; };
+function groupVillages(){
+  // 모둠 번호 → 마을 (빈 모둠은 건너뛰어요)
+  const byG = {};
+  Object.keys(H.players).forEach(pid => { if(!H.players[pid]?.name) return; const g = myGroup(pid); if(g) (byG[g] = byG[g] || []).push(pid); });
+  const gs = Object.keys(byG).map(Number).sort((a,b) => a-b);
+  const villageOf = {}, names = [];
+  gs.forEach((g, i) => { byG[g].forEach(pid => villageOf[pid] = i); names[i] = `${VILLAGES[i%8][0]} ${g}모둠`; });
+  return { villageOf, names };
+}
+function syncGroupVillages(){
+  const { villageOf, names } = groupVillages();
+  const changed = JSON.stringify(villageOf) !== JSON.stringify(H.villageOf) || JSON.stringify(names) !== JSON.stringify(H.vNames || []);
+  H.villageOf = villageOf; H.vNames = names; VNAMES = names;
+  if(changed) DB.patch(`rooms/${H.code}/state`, { villageOf, ...gstate() });
+}
+function setGroupMode(m){
+  H.groupMode = m; store.set("nj-gmode", m);
+  if(m === "group"){ if(H.vCount < 2) H.vCount = 6; syncGroupVillages(); }
+  else { H.vNames = null; VNAMES = null; H.villageOf = {}; }
+  DB.patch(`rooms/${H.code}/state`, { villageOf: H.villageOf, ...gstate() });
+  renderLobby();
+}
 function renderLobby(){
+  const gm = H.groupMode === "group";
+  if(gm) syncGroupVillages();
+  document.querySelectorAll("#gModeBtns button").forEach(b => b.classList.toggle("on", b.dataset.gmode === H.groupMode));
+  $("#vCountLabel").textContent = gm ? "모둠 수" : "마을 수";
+  $("#divideBtn").classList.toggle("hidden", gm);
+  $("#gModeHint").textContent = gm
+    ? "학생 태블릿에서 모둠 번호를 고르면 그대로 마을이 돼요. 모둠 번호를 안 고른 친구(❔)는 시작할 때 인원이 적은 모둠에 들어가요."
+    : "한 마을 4~5명이 좋아요. 마을마다 따로 한 판을 해요.";
   const ps = Object.entries(H.players).filter(([,p]) => p && p.name).sort((a,b) => String(a[1].name).localeCompare(String(b[1].name), "ko", {numeric:true}));
   $("#joinCount").textContent = `(${ps.length}명)`;
-  $("#joinList").innerHTML = ps.map(([pid,p]) => `<span class="chip">${H.villageOf[pid]!=null?VILLAGES[H.villageOf[pid]%8][0]:"🆕"} ${esc(p.name)} <button data-kick="${pid}" title="내보내기">✕</button></span>`).join("") || `<span class="hint">아직 아무도 없어요.</span>`;
+  $("#joinList").innerHTML = ps.map(([pid,p]) => {
+    const badge = gm ? (myGroup(pid) ? `<b style="background:var(--accent2);color:#1a1240;border-radius:8px;padding:0 6px;font-size:13px">${myGroup(pid)}모둠</b>` : "❔") : (H.villageOf[pid]!=null?VILLAGES[H.villageOf[pid]%8][0]:"🆕");
+    return `<span class="chip">${badge} ${esc(p.name)} <button data-kick="${pid}" title="내보내기">✕</button></span>`;
+  }).join("") || `<span class="hint">아직 아무도 없어요.</span>`;
   $("#vCount").textContent = H.vCount;
   const groups = villageGroups();
   $("#villageList").innerHTML = groups.map((mem, vi) => `<div class="vbox"><b>${vName(vi)}</b> <span class="hint">${mem.length}명</span><div>${mem.map(pid => esc(H.players[pid]?.name)).join(", ") || "-"}</div></div>`).join("");
+  const unassigned = ps.filter(([pid]) => H.villageOf[pid] == null).length;
+  if(gm){
+    // 시작할 때 안 고른 친구가 들어갈 걸 생각해서 판단해요
+    const sizes = groups.map(g => g.length); let left = unassigned;
+    while(left > 0 && sizes.length){ const k = sizes.indexOf(Math.min(...sizes)); sizes[k]++; left--; }
+    const ok = sizes.length > 0 && sizes.every(n => n >= 2);
+    $("#startHide").disabled = !ok;
+    $("#lobbyErr").textContent = !ps.length ? "" : (!groups.length ? "학생들이 태블릿에서 모둠 번호를 고르면 마을이 생겨요." :
+      (!ok ? "모둠마다 2명 이상이어야 해요. 혼자인 모둠 친구는 다른 모둠 번호를 골라 주세요." :
+      (unassigned ? `❔ ${unassigned}명은 아직 모둠을 안 골랐어요. 이대로 시작하면 인원이 적은 모둠에 들어가요.` : "")));
+    return;
+  }
   const ok = groups.length > 0 && groups.every(g => g.length >= 2);
   $("#startHide").disabled = !ok;
-  const unassigned = ps.filter(([pid]) => H.villageOf[pid] == null).length;
   $("#lobbyErr").textContent = !groups.length ? "" : (!ok ? "마을마다 2명 이상이어야 해요. 마을 수를 줄이거나 다시 나눠 주세요." : (unassigned ? `🆕 표시 ${unassigned}명은 아직 마을이 없어요. '마을 나누기'를 다시 누르면 함께해요.` : ""));
 }
 function villageGroups(){
@@ -3243,23 +3311,33 @@ function villageGroups(){
   return groups.map(g => g || []);
 }
 function divideVillages(){
+  H.vNames = null; VNAMES = null;
   const pids = shuffle(Object.keys(H.players).filter(pid => H.players[pid] && H.players[pid].name));
   const n = Math.min(H.vCount, Math.max(1, Math.floor(pids.length/2)));
   H.vCount = n;
   H.villageOf = {};
   pids.forEach((pid, k) => H.villageOf[pid] = k % n);
-  DB.put(`rooms/${H.code}/state/villageOf`, H.villageOf);
+  DB.patch(`rooms/${H.code}/state`, { villageOf: H.villageOf, ...gstate() });
   renderLobby();
 }
 
 /* ---------- 숨기기 ---------- */
 function startHide(){
+  if(H.groupMode === "group"){
+    syncGroupVillages();
+    const groups0 = villageGroups();
+    Object.keys(H.players).filter(pid => H.players[pid]?.name && H.villageOf[pid] == null).forEach(pid => {
+      let k = 0; groups0.forEach((g,i) => { if(g.length < groups0[k].length) k = i; });
+      if(!groups0.length) return;
+      groups0[k].push(pid); H.villageOf[pid] = k;
+    });
+  }
   const groups = villageGroups();
   H.members = groups;
   H.phase = "hide";
   H.hidesRaw = {};
   H.hideDeadline = Date.now() + H.cfg.hideSec*1000;
-  H.state = { phase:"hide", round:H.round, villageOf:H.villageOf, hideId: rid(), hideSec: H.cfg.hideSec };
+  H.state = { phase:"hide", round:H.round, villageOf:H.villageOf, ...gstate(), hideId: rid(), hideSec: H.cfg.hideSec };
   DB.del(`rooms/${H.code}/hides`).then(() => DB.put(`rooms/${H.code}/state`, H.state));
   show("hHide"); renderHideProgress();
 }
@@ -3307,7 +3385,7 @@ function startPlay(resume){
     H.gameEndAt = now + H.cfg.gameMin*60000;
   }
   H.phase = "play";
-  H.state = { phase:"play", round:H.round, villageOf:H.villageOf, playId: rid(), gameMs: H.gameEndAt - now, endEpoch: H.gameEndAt };
+  H.state = { phase:"play", round:H.round, villageOf:H.villageOf, ...gstate(), playId: rid(), gameMs: H.gameEndAt - now, endEpoch: H.gameEndAt };
   DB.put(`rooms/${H.code}/v`, H.villages.map(pubV));
   DB.put(`rooms/${H.code}/state`, H.state);
   $("#playTitle").textContent = "🥷 " + H.cfg.title;
@@ -3461,6 +3539,10 @@ async function endRound(reason){
   }).sort((a,b) => b.alive - a.alive || b.kills - a.kills || b.passes - a.passes);
   let rank = 0, prev = null;
   rows.forEach((r,k) => { if(r.alive !== prev){ rank = k+1; prev = r.alive; } r.rank = rank; });
+  // 🏅 개인상: 모든 참여자가 하나씩 받아요
+  const vMaxKills = {};
+  rows.forEach(r => vMaxKills[r.vi] = Math.max(vMaxKills[r.vi] || 0, r.kills));
+  rows.forEach(r => r.award = personalAward(r, N, vMaxKills[r.vi], H.cfg.judge === "auto"));
 
   // 시상
   const awards = [];
@@ -3483,7 +3565,7 @@ async function endRound(reason){
   }
 
   const result = { reason, rows, awards, N, judge: H.cfg.judge };
-  H.state = { phase:"end", round:H.round, villageOf:H.villageOf, result };
+  H.state = { phase:"end", round:H.round, villageOf:H.villageOf, ...gstate(), result };
   DB.put(`rooms/${H.code}/totals`, H.totals);
   DB.put(`rooms/${H.code}/state`, H.state);
 
@@ -3492,10 +3574,25 @@ async function endRound(reason){
   $("#awardBox").innerHTML = awardsHTML(awards);
   show("hEnd");
 }
+function personalAward(r, N, vMax, auto){
+  const rate = r.tries ? r.passes / r.tries : 0;
+  if(r.alive === N)                       return ["👻", "유령 닌자", "닌자가 한 명도 안 쓰러졌어요!"];
+  if(r.rank === 1)                        return ["🥇", "최후의 닌자", `닌자 ${r.alive}명이 살아남아 1등!`];
+  if(r.kills >= 2 && r.kills === vMax)    return ["🎯", "마을 명사수", `우리 마을에서 가장 많은 ${r.kills}명을 쓰러뜨렸어요`];
+  if(auto && r.avg != null && r.avg >= 95 && r.passes >= 2) return ["🎤", "원어민 발음", `읽기 평균 ${r.avg}점!`];
+  if(r.tries >= 3 && rate >= 0.8)         return ["📖", "읽기 달인", `${r.tries}번 중 ${r.passes}번 성공했어요`];
+  if(r.kills >= 2)                        return ["⚔️", "용감한 공격수", `닌자 ${r.kills}명을 쓰러뜨렸어요`];
+  if(r.alive >= Math.ceil(N * 0.7))       return ["🛡️", "철벽 수비", `닌자 ${r.alive}명을 지켜 냈어요`];
+  if(r.tries >= 4)                        return ["🔥", "열정 닌자", `${r.tries}번이나 도전했어요`];
+  if(r.kills === 1)                       return ["🎯", "한 방 닌자", "표창 한 방으로 닌자를 쓰러뜨렸어요"];
+  if(r.selfKills >= 1)                    return ["😅", "반전의 닌자", "다음엔 내 닌자 줄을 피해 봐요!"];
+  if(r.passes >= 1)                       return ["✨", "성장 닌자", `읽기 ${r.passes}번 성공! 다음 판이 기대돼요`];
+  return ["🌱", "새싹 닌자", "용기 내어 참여했어요. 다음 판엔 더 멋지게!"];
+}
 function resultTableHTML(res, me){
   const medal = r => r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : r;
-  return `<tr><th>순위</th><th>이름</th><th>마을</th><th>살아남은 닌자</th><th>쓰러뜨림</th><th>읽기 성공</th>${res.judge==="auto"?"<th>평균 점수</th>":""}<th>누적</th></tr>` +
-    res.rows.map(r => `<tr class="${r.rank===1?'first':''} ${r.pid===me?'me':''}"><td>${medal(r.rank)}</td><td>${esc(r.name)}</td><td>${VILLAGES[r.vi%8][0]}</td><td>${r.alive}/${res.N}</td><td>${r.kills}</td><td>${r.passes}/${r.tries}</td>${res.judge==="auto"?`<td>${r.avg ?? "-"}</td>`:""}<td class="tot"><b>${r.total}</b></td></tr>`).join("");
+  return `<tr><th>순위</th><th>이름</th><th>마을</th><th>살아남은 닌자</th><th>쓰러뜨림</th><th>읽기 성공</th>${res.judge==="auto"?"<th>평균 점수</th>":""}<th>누적</th><th>개인상</th></tr>` +
+    res.rows.map(r => `<tr class="${r.rank===1?'first':''} ${r.pid===me?'me':''}"><td>${medal(r.rank)}</td><td>${esc(r.name)}</td><td>${VILLAGES[r.vi%8][0]}</td><td>${r.alive}/${res.N}</td><td>${r.kills}</td><td>${r.passes}/${r.tries}</td>${res.judge==="auto"?`<td>${r.avg ?? "-"}</td>`:""}<td class="tot"><b>${r.total}</b></td><td style="white-space:nowrap">${r.award ? `${r.award[0]} ${esc(r.award[1])}` : ""}</td></tr>`).join("");
 }
 function awardsHTML(aw){ return (aw||[]).map(a => `<div class="award"><b>${a[0]}</b>${esc(a[1])}<div class="hint">${esc(a[2])}</div></div>`).join("") || `<div class="hint">상이 없어요.</div>`; }
 
@@ -3551,6 +3648,13 @@ function studentInit(){
   $("#sName").value = saved ? saved.name : "";
   show("sJoin");
   $("#sJoinBtn").onclick = studentJoin;
+  $("#sGroupBtns").addEventListener("click", async e => {
+    const b = e.target.closest("[data-g]"); if(!b || !S.me) return;
+    document.querySelectorAll("#sGroupBtns button").forEach(x => x.classList.toggle("on", x === b));
+    sfx.tick();
+    try{ await DB.req("PATCH", `rooms/${ROOM}/players/${S.me.pid}`, { group: +b.dataset.g }); }
+    catch(err){ alert("보내지 못했어요. 다시 눌러 주세요."); }
+  });
   $("#sName").addEventListener("keydown", e => { if(e.key === "Enter") studentJoin(); });
   $("#sRandom").onclick = () => { const total = CFG.rows.length*CFG.cols.length; S.cells = new Set(shuffle([...Array(total).keys()]).slice(0, CFG.ninjas)); renderSHide(); };
   $("#sClear").onclick = () => { S.cells.clear(); renderSHide(); };
@@ -3590,7 +3694,7 @@ async function studentJoin(){
     const cfg = await DB.get(`rooms/${ROOM}/cfg`);
     if(!cfg){ $("#sJoinErr").textContent = "방이 없어요. 방 번호를 확인해 주세요."; $("#sJoinBtn").disabled = false; return; }
     const pid = hashName(name);
-    await DB.req("PUT", `rooms/${ROOM}/players/${pid}`, { name, t: Date.now() });
+    await DB.req("PATCH", `rooms/${ROOM}/players/${pid}`, { name, t: Date.now() });
     S.me = { pid, name };
     store.set("nj-me-" + ROOM, { name });
     DB.listen(`rooms/${ROOM}`, (room, first) => { S.room = room; studentUpdate(first); });
@@ -3612,12 +3716,21 @@ function studentUpdate(first){
   }
   CFG = room.cfg;
   const st = room.state || { phase:"lobby" };
+  VNAMES = st.vNames || null;
   const vi = myVillage();
+  const showPick = st.phase === "lobby" && st.groupMode === "group";
+  $("#sGroupBox").classList.toggle("hidden", !showPick);
+  if(showPick){
+    const n = Math.max(2, Math.min(8, +st.groupCount || 6)), mine = +(room.players?.[S.me.pid]?.group) || 0;
+    $("#sGroupBtns").innerHTML = Array.from({length:n}, (_,k) => `<button data-g="${k+1}" class="${mine===k+1?'on':''}">${k+1}</button>`).join("");
+  }
   if(st.phase !== "play" && READ.open){ stopRec(); closeRead(); }
   if(st.phase === "lobby"){
     show("sWait");
+    const needPick = st.groupMode === "group" && !(+room.players?.[S.me.pid]?.group);
     $("#sWaitBox").innerHTML = `<div class="emo">🥷</div>${esc(S.me.name)}, 들어왔어요!<br>` +
-      (vi != null ? `<span style="color:var(--accent2)">${vName(vi)}</span>이에요.<br>` : "") +
+      (needPick ? `<span style="color:var(--accent2)">👇 아래에서 내 모둠 번호를 골라요.</span><br>` :
+       (vi != null ? `<span style="color:var(--accent2)">${vName(vi)}</span>이에요.<br>` : "")) +
       `<span class="hint" style="font-size:18px">선생님이 시작할 때까지 기다려요.</span>`;
     return;
   }
@@ -3653,7 +3766,8 @@ function studentUpdate(first){
     $("#sEndBox").innerHTML = me
       ? `<div class="emo">${me.rank===1?"🥇":me.rank===2?"🥈":me.rank===3?"🥉":"🥷"}</div>${esc(res.reason)}<br>
          살아남은 내 닌자: <span style="color:var(--accent2)">${me.alive}/${res.N}</span><br>
-         <span style="font-size:.8em">전체 ${me.rank}등 · 쓰러뜨린 닌자 ${me.kills}명 · 누적 점수 ${me.total}</span>`
+         <span style="font-size:.8em">전체 ${me.rank}등 · 쓰러뜨린 닌자 ${me.kills}명 · 누적 점수 ${me.total}</span>` +
+        (me.award ? `<div class="myaward"><div class="hint" style="font-size:15px">🏅 나의 개인상</div><div class="ma-e">${me.award[0]}</div><div class="ma-t">${esc(me.award[1])}</div><div class="ma-d">${esc(me.award[2])}</div></div>` : "")
       : `<div class="emo">🏁</div>${esc(res.reason)}`;
     $("#sAwards").innerHTML = awardsHTML(res.awards);
   }
@@ -3871,7 +3985,7 @@ function guideSlides(){
     `<h2>🏘️ 마을 나누기</h2>
      <div class="vgrid">${VILLAGES.slice(0,6).map(v => `<div><i>${v[0]}</i>${v[1]} 마을</div>`).join("")}</div>
      <div class="gcards">
-       <div class="gcard">선생님이 반 친구들을 여러 <b>마을</b>로 나눠요.</div>
+       <div class="gcard">선생님이 <b>무작위</b>로 나누거나, 내가 앉은 <b>모둠 번호</b>를 골라 <b>마을</b>이 돼요.</div>
        <div class="gcard">같은 마을 친구들끼리 <b>한 판</b>을 해요. 한 마을에 4~5명이 좋아요.</div>
        <div class="gcard">마을 안에서 <b>차례는 무작위</b>로 정해져요.</div>
      </div>`,
