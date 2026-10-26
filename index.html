@@ -60,6 +60,9 @@ button{font-family:inherit;cursor:pointer}
 .btn.small{padding:8px 12px;font-size:14px;border-radius:10px}
 .btn.big{font-size:22px;padding:16px 26px}
 .hidden{display:none!important}
+.mstep{background:#16113a;border-radius:12px;padding:10px 14px;margin:8px 0}
+.mstep b{color:var(--accent2)}
+.mstep .n{display:inline-block;width:26px;height:26px;border-radius:13px;background:var(--accent);color:#fff;text-align:center;font-weight:900;margin-right:6px;line-height:26px}
 .gpick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:440px;margin:10px auto 0}
 .gpick button{font-size:26px;font-weight:900;padding:16px 0;border-radius:16px;background:var(--card2);color:#fff;border:2px solid var(--line)}
 .gpick button.on{background:var(--accent2);color:#1a1240;border-color:var(--accent2)}
@@ -70,6 +73,7 @@ button{font-family:inherit;cursor:pointer}
 .big-code{font-size:clamp(40px,7vw,72px);font-weight:900;letter-spacing:6px;color:var(--accent2)}
 .qr{background:#fff;padding:10px;border-radius:14px;display:inline-block}
 .qr svg{display:block;width:min(280px,60vw);height:auto}
+#qrBig svg{width:min(380px,70vw,55vh)}
 .net{position:fixed;top:8px;right:8px;background:var(--bad);color:#fff;padding:6px 10px;border-radius:10px;font-weight:800;z-index:90}
 
 /* ---------- 보드 ---------- */
@@ -281,6 +285,7 @@ tr.me td{background:#3a2d75}
 
   <div class="row center" style="margin:18px 0">
     <button class="btn small" data-guide>📖 활동 방법 보기</button>
+    <button class="btn small" data-michelp>🎤 마이크 허용 방법</button>
     <button class="btn small" id="resetDefault">↺ 기본값</button>
     <button class="btn primary big" id="createBtn">🏯 방 만들기</button>
   </div>
@@ -292,6 +297,7 @@ tr.me td{background:#3a2d75}
     <h1 style="margin:0">🏯 <span id="lobbyTitle"></span></h1>
     <div class="row">
       <button class="btn small" data-guide>📖 활동 방법 보기</button>
+      <button class="btn small" data-michelp>🎤 마이크 허용 방법</button>
       <button class="btn small" id="toSettings">⚙️ 표현·규칙 바꾸기</button>
       <button class="btn small" id="closeRoom">🚪 방 닫기</button>
     </div>
@@ -336,7 +342,7 @@ tr.me td{background:#3a2d75}
 <section id="hHide" class="hidden">
   <div class="topbar">
     <h1 style="margin:0">🥷 닌자를 숨기는 중…</h1>
-    <span class="clock" id="hideClock"></span>
+    <div class="row"><button class="btn small" data-qr>📷 QR 다시 보기</button><span class="clock" id="hideClock"></span></div>
   </div>
   <p class="sub">학생들은 각자 태블릿에서 닌자를 숨겨요. 시간이 지나면 못 숨긴 닌자는 저절로 숨어요.</p>
   <div class="vlist" id="hideList"></div>
@@ -349,6 +355,7 @@ tr.me td{background:#3a2d75}
     <div class="row">
       <span class="hint">방 <b id="playCode"></b></span>
       <span class="clock" id="gameClock">⏰ 0:00</span>
+      <button class="btn small" data-qr>📷 QR 다시 보기</button>
       <button class="btn small" id="endRound">🏁 이번 판 끝내기</button>
     </div>
   </div>
@@ -362,6 +369,7 @@ tr.me td{background:#3a2d75}
   <div class="card"><table id="resultTable"></table></div>
   <div class="card"><h2>🎖️ 시상식</h2><div class="awards" id="awardBox"></div></div>
   <div class="row center" style="margin:16px 0">
+    <button class="btn" data-qr>📷 QR 다시 보기</button>
     <button class="btn" id="resetTotals">누적 점수 지우기</button>
     <button class="btn" id="closeRoom2">🚪 방 닫기</button>
     <button class="btn primary big" id="nextRound">🔁 다음 판 (마을 다시 나누기)</button>
@@ -377,7 +385,10 @@ tr.me td{background:#3a2d75}
     <input type="text" id="sName" maxlength="12" placeholder="예) 7 또는 7 김민수" style="font-size:22px;text-align:center">
     <p class="hint">다시 들어올 때도 똑같이 쓰면 점수가 이어져요.</p>
     <button class="btn primary big" id="sJoinBtn" style="width:100%;margin-top:8px">들어가기</button>
-    <button class="btn small" data-guide style="margin-top:12px">📖 활동 방법 보기</button>
+    <div class="row center" style="margin-top:12px">
+      <button class="btn small" data-guide>📖 활동 방법 보기</button>
+      <button class="btn small" data-michelp>🎤 마이크 허용 방법</button>
+    </div>
     <div class="err" id="sJoinErr"></div>
   </div>
 </section>
@@ -396,6 +407,7 @@ tr.me td{background:#3a2d75}
     <div class="sentence" style="font-size:26px">Hello, nice to meet you.</div>
     <button class="mic" id="testMic" style="width:90px;height:90px;font-size:40px">🎤</button>
     <div class="heard" id="testHeard"></div>
+    <button class="btn small" data-michelp style="margin-top:6px">🎤 마이크가 안 돼요 (허용 방법)</button>
   </div>
 </section>
 
@@ -463,7 +475,35 @@ tr.me td{background:#3a2d75}
     </div>
     <div class="row center" style="margin-top:10px">
       <button class="btn small" id="readCancel">↩ 다른 줄 고르기</button>
+      <button class="btn small hidden" id="readMicHelp" data-michelp>🎤 마이크 허용 방법</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="micOv" style="z-index:85">
+  <div class="modal" style="width:min(640px,100%);text-align:left">
+    <h2 style="text-align:center">🎤 마이크 허용 방법</h2>
+    <div class="row seg center" id="micTabs" style="margin-bottom:10px">
+      <button class="btn small" data-mt="ipad">🍎 아이패드</button>
+      <button class="btn small" data-mt="chrome">🌐 크롬 (안드로이드·크롬북·PC)</button>
+    </div>
+    <div id="micBody" style="font-size:17px;line-height:1.65"></div>
+    <div class="row center" style="margin-top:14px">
+      <button class="btn" id="micReload">🔄 새로고침</button>
+      <button class="btn primary" id="micClose">닫기</button>
+    </div>
+    <p class="hint" style="text-align:center">새로고침한 뒤에는 처음과 같은 이름으로 다시 들어가요.</p>
+  </div>
+</div>
+
+<div class="overlay hidden" id="qrOv">
+  <div class="modal" style="width:min(560px,100%)">
+    <h2>📷 다시 들어오기</h2>
+    <div class="qr" id="qrBig"></div>
+    <div style="margin-top:8px">방 번호</div>
+    <div class="big-code" id="qrCode"></div>
+    <div class="help" style="font-size:17px;line-height:1.6">태블릿 카메라로 QR을 찍고<br><b>처음과 똑같은 번호·닉네임</b>을 쓰면<br>내 닌자와 점수가 그대로 이어져요!</div>
+    <button class="btn primary big" id="qrClose">닫기</button>
   </div>
 </div>
 
@@ -3150,6 +3190,16 @@ function hostInit(){
   $("#closeRoom").onclick = $("#closeRoom2").onclick = closeRoom;
   $("#resetTotals").onclick = async () => { if(!confirm("누적 점수를 모두 지울까요?")) return; H.totals = {}; await DB.del(`rooms/${H.code}/totals`); $("#resultTable").querySelectorAll("td.tot").forEach(td => td.textContent = "0"); };
   $("#previewStudent").onclick = () => window.open(joinUrl(), "_blank");
+  document.addEventListener("click", e => {
+    if(!e.target.closest("[data-qr]") || !H) return;
+    try{
+      const qr = qrcode(0, "M"); qr.addData(joinUrl()); qr.make();
+      $("#qrBig").innerHTML = qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+    }catch(err){ $("#qrBig").textContent = "QR을 만들지 못했어요"; }
+    $("#qrCode").textContent = H.code;
+    $("#qrOv").classList.remove("hidden");
+  });
+  $("#qrClose").onclick = () => $("#qrOv").classList.add("hidden");
   $("#joinList").addEventListener("click", e => {
     const b = e.target.closest("[data-kick]"); if(!b) return;
     const pid = b.dataset.kick;
@@ -3678,7 +3728,7 @@ function studentInit(){
     $("#testMic").classList.add("on"); $("#testHeard").textContent = "👂 듣고 있어요…";
     recognize(t => $("#testHeard").textContent = "🗣️ " + t, (alts, err) => {
       $("#testMic").classList.remove("on");
-      if(err && !alts.length) return $("#testHeard").textContent = SR_ERR[err] || "🤔 소리가 안 들렸어요. 다시 해 봐요.";
+      if(err && !alts.length) return $("#testHeard").innerHTML = esc(SR_ERR[err] || "🤔 소리가 안 들렸어요. 다시 해 봐요.") + (err !== "no-speech" ? `<br><b style="color:var(--accent2)">👇 아래 '마이크가 안 돼요'를 눌러 봐요.</b>` : "");
       if(!alts.length) return $("#testHeard").textContent = "🤔 소리가 안 들렸어요. 다시 해 봐요.";
       const sc = Math.max(...alts.map(a => similarity("Hello, nice to meet you.", a)));
       $("#testHeard").innerHTML = `🗣️ ${esc(alts[0])} → <b style="color:${sc>=80?'var(--good)':'var(--accent2)'}">${sc}점</b> ${sc>=80?'👍 준비 완료!':'또박또박 다시 해 봐요'}`;
@@ -3880,6 +3930,7 @@ function openRead(type, idx){
   $("#micBtn").classList.toggle("hidden", manual);
   $("#manualBtns").classList.toggle("hidden", !manual);
   $("#fallbackBtns").classList.add("hidden");
+  $("#readMicHelp").classList.add("hidden");
   $("#readCancel").classList.remove("hidden");
   $("#heard").textContent = manual ? "소리 내어 읽고, 모둠 친구들이 듣고 판정해요." : "🎤 단추를 누르고 또박또박 읽어요.";
   $("#scoreBox").textContent = ""; $("#scoreBox").className = "score";
@@ -3907,6 +3958,7 @@ $("#micBtn").onclick = () => {
       if(err && err !== "no-speech" && err !== "aborted"){
         $("#heard").textContent = SR_ERR[err] || "음성인식에 문제가 생겼어요.";
         $("#fallbackBtns").classList.remove("hidden");
+        $("#readMicHelp").classList.remove("hidden");
       } else $("#heard").textContent = "🤔 소리가 안 들렸어요. 다시 눌러서 읽어요.";
       return;
     }
@@ -4078,6 +4130,39 @@ document.addEventListener("keydown", e => {
   if(e.key === "ArrowLeft") $("#gPrev").click();
   if(e.key === "Escape") closeGuide();
 });
+
+/* =====================================================================
+   🎤 마이크 허용 방법
+   ===================================================================== */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const MIC_HELP = {
+  ipad: `
+    <div class="mstep"><span class="n">1</span><b>사파리</b>로 열어요. QR을 카메라로 찍으면 보통 사파리로 열려요.</div>
+    <div class="mstep"><span class="n">2</span>마이크를 쓸지 물어보면 <b>허용</b>을 눌러요.</div>
+    <div class="mstep"><span class="n">3</span>'허용 안 함'을 눌렀다면:<br><b>설정 → 앱 → Safari → 웹 사이트 설정 → 마이크 → 허용</b><br><span class="hint">(버전에 따라 '앱' 없이 설정 → Safari에 바로 있어요)</span></div>
+    <div class="mstep"><span class="n">4</span>받아쓰기를 켜요:<br><b>설정 → 일반 → 키보드 → 받아쓰기 활성화</b></div>
+    <div class="mstep"><span class="n">5</span>그래도 안 되면 영어 키보드를 추가해요:<br><b>설정 → 일반 → 키보드 → 키보드 → 새로운 키보드 추가 → English (US)</b></div>
+    <div class="mstep"><span class="n">6</span>설정을 바꾼 뒤에는 이 화면으로 돌아와 <b>🔄 새로고침</b>을 눌러요.</div>
+    <p class="hint">메뉴가 회색이라 바꿀 수 없으면 학교에서 막아 둔 거예요. 선생님께 말해요. 그동안은 모둠 친구들이 ⭕/❌로 판정해 줄 수 있어요.</p>`,
+  chrome: `
+    <div class="mstep"><span class="n">1</span><b>크롬</b>으로 열어요.</div>
+    <div class="mstep"><span class="n">2</span>마이크를 쓸지 물어보면 <b>허용</b>을 눌러요.</div>
+    <div class="mstep"><span class="n">3</span>'차단'을 눌렀다면: 주소창 왼쪽 <b>자물쇠(또는 ⓘ / 조절 아이콘)</b> 누르기 → <b>권한 → 마이크 → 허용</b></div>
+    <div class="mstep"><span class="n">4</span>안드로이드에서 그래도 안 되면:<br><b>설정 → 애플리케이션 → Chrome → 권한 → 마이크 → 앱 사용 중에만 허용</b></div>
+    <div class="mstep"><span class="n">5</span>다른 앱이나 탭에서 마이크를 쓰고 있으면 꺼요.</div>
+    <div class="mstep"><span class="n">6</span>설정을 바꾼 뒤에는 이 화면으로 돌아와 <b>🔄 새로고침</b>을 눌러요.</div>
+    <p class="hint">그래도 안 되면 선생님께 말해요. 그동안은 모둠 친구들이 ⭕/❌로 판정해 줄 수 있어요.</p>`
+};
+function showMicTab(t){
+  document.querySelectorAll("#micTabs button").forEach(b => b.classList.toggle("on", b.dataset.mt === t));
+  $("#micBody").innerHTML = MIC_HELP[t];
+}
+document.addEventListener("click", e => {
+  if(e.target.closest("[data-michelp]")){ showMicTab(IS_IOS ? "ipad" : "chrome"); $("#micOv").classList.remove("hidden"); }
+  const tb = e.target.closest("#micTabs [data-mt]"); if(tb) showMicTab(tb.dataset.mt);
+});
+$("#micClose").onclick = () => $("#micOv").classList.add("hidden");
+$("#micReload").onclick = () => location.reload();
 
 /* ---------- 시작 ---------- */
 if(IS_STUDENT) studentInit(); else hostInit();
