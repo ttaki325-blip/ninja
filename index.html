@@ -314,7 +314,7 @@ tr.me td{background:#3a2d75}
     <div class="card">
       <h2>🙋 들어온 친구 <span id="joinCount"></span></h2>
       <div id="joinList"></div>
-      <p class="hint">📷 태블릿 카메라로 QR을 찍고, 번호 또는 닉네임을 써요. (크롬 권장)</p>
+      <p class="hint">📷 태블릿 카메라로 QR을 찍고, 이름을 써요. (크롬 권장)</p>
     </div>
   </div>
   <div class="card">
@@ -381,8 +381,8 @@ tr.me td{background:#3a2d75}
   <div class="card" style="max-width:520px;margin:30px auto;text-align:center">
     <h1>🥷 영어 닌자 대작전</h1>
     <p class="sub">방 번호 <b id="sRoomCode" style="color:var(--accent2)"></b></p>
-    <label>✍️ 번호 또는 닉네임</label>
-    <input type="text" id="sName" maxlength="12" placeholder="예) 7 또는 7 김민수" style="font-size:22px;text-align:center">
+    <label>✍️ 이름만 쓰세요. 예) 김민수</label>
+    <input type="text" id="sName" maxlength="12" placeholder="예) 김민수" style="font-size:22px;text-align:center">
     <p class="hint">다시 들어올 때도 똑같이 쓰면 점수가 이어져요.</p>
     <button class="btn primary big" id="sJoinBtn" style="width:100%;margin-top:8px">들어가기</button>
     <div class="row center" style="margin-top:12px">
@@ -407,7 +407,11 @@ tr.me td{background:#3a2d75}
     <div class="sentence" style="font-size:26px">Hello, nice to meet you.</div>
     <button class="mic" id="testMic" style="width:90px;height:90px;font-size:40px">🎤</button>
     <div class="heard" id="testHeard"></div>
-    <button class="btn small" data-michelp style="margin-top:6px">🎤 마이크가 안 돼요 (허용 방법)</button>
+    <div class="row center" style="margin-top:6px">
+      <button class="btn small" data-michelp>🎤 마이크가 안 돼요 (허용 방법)</button>
+      <button class="btn small" data-nv>🙋 음성인식 없이 하기</button>
+    </div>
+    <div class="help hidden" id="nvNote">🙋 지금은 <b>음성인식 없이</b> 해요. 내 차례에 소리 내어 읽으면 모둠 친구가 듣고 ⭕/❌를 눌러 줘요.</div>
   </div>
 </section>
 
@@ -472,6 +476,7 @@ tr.me td{background:#3a2d75}
       <span class="hint">음성인식이 안 될 때 · 모둠 친구들이 듣고 눌러요:</span>
       <button class="btn small go" id="fbOk">⭕ 통과</button>
       <button class="btn small" id="fbNo">❌ 실패</button>
+      <button class="btn small" data-nv>🙋 앞으로 음성인식 없이 하기</button>
     </div>
     <div class="row center" style="margin-top:10px">
       <button class="btn small" id="readCancel">↩ 다른 줄 고르기</button>
@@ -493,6 +498,10 @@ tr.me td{background:#3a2d75}
       <button class="btn primary" id="micClose">닫기</button>
     </div>
     <p class="hint" style="text-align:center">새로고침한 뒤에는 처음과 같은 이름으로 다시 들어가요.</p>
+    <div class="hidden" id="nvBox" style="text-align:center;border-top:1px dashed var(--line);padding-top:12px;margin-top:6px">
+      <div style="font-size:16px;margin-bottom:8px">그래도 안 되면 👇 <b>나만</b> 음성인식 없이 할 수 있어요.<br><span class="hint">내 차례에 소리 내어 읽으면 모둠 친구가 듣고 ⭕/❌를 눌러 줘요.</span></div>
+      <button class="btn go" data-nv>🙋 음성인식 없이 하기</button>
+    </div>
   </div>
 </div>
 
@@ -502,7 +511,7 @@ tr.me td{background:#3a2d75}
     <div class="qr" id="qrBig"></div>
     <div style="margin-top:8px">방 번호</div>
     <div class="big-code" id="qrCode"></div>
-    <div class="help" style="font-size:17px;line-height:1.6">태블릿 카메라로 QR을 찍고<br><b>처음과 똑같은 번호·닉네임</b>을 쓰면<br>내 닌자와 점수가 그대로 이어져요!</div>
+    <div class="help" style="font-size:17px;line-height:1.6">태블릿 카메라로 QR을 찍고<br><b>처음과 똑같은 이름</b>을 쓰면<br>내 닌자와 점수가 그대로 이어져요!</div>
     <button class="btn primary big" id="qrClose">닫기</button>
   </div>
 </div>
@@ -3259,7 +3268,11 @@ function startHost(code, cfg, players, state, totals){
   H.groupMode = state.groupMode || store.get("nj-gmode", "random");
   H.vNames = state.vNames || null; VNAMES = H.vNames;
   if(state.groupCount) H.vCount = state.groupCount;
-  DB.listen(`rooms/${code}/players`, m => { H.players = m || {}; if(H.phase === "lobby") renderLobby(); });
+  DB.listen(`rooms/${code}/players`, m => {
+    H.players = m || {};
+    if(H.phase === "lobby") renderLobby();
+    else if(H.phase === "hide" || H.phase === "play") lateJoin();
+  });
   DB.listen(`rooms/${code}/hides`, m => { H.hidesRaw = m || {}; if(H.phase === "hide"){ renderHideProgress(); checkAllHidden(); } });
   DB.listen(`rooms/${code}/actions`, m => {
     if(!m) return;
@@ -3331,7 +3344,7 @@ function renderLobby(){
   $("#joinCount").textContent = `(${ps.length}명)`;
   $("#joinList").innerHTML = ps.map(([pid,p]) => {
     const badge = gm ? (myGroup(pid) ? `<b style="background:var(--accent2);color:#1a1240;border-radius:8px;padding:0 6px;font-size:13px">${myGroup(pid)}모둠</b>` : "❔") : (H.villageOf[pid]!=null?VILLAGES[H.villageOf[pid]%8][0]:"🆕");
-    return `<span class="chip">${badge} ${esc(p.name)} <button data-kick="${pid}" title="내보내기">✕</button></span>`;
+    return `<span class="chip">${badge} ${esc(p.name)}${p.noVoice ? " 🙋" : ""} <button data-kick="${pid}" title="내보내기">✕</button></span>`;
   }).join("") || `<span class="hint">아직 아무도 없어요.</span>`;
   $("#vCount").textContent = H.vCount;
   const groups = villageGroups();
@@ -3453,6 +3466,45 @@ function newTurn(v, advance){
   v.turnId = rid();
   v.deadline = Date.now() + (H.cfg.turnSec + 4)*1000; // 배너 보는 시간 포함
 }
+/* ---------- 늦게 온(튕긴) 친구: 진행 중인 판에 바로 넣어요 ---------- */
+function lateJoin(){
+  const newbies = Object.keys(H.players).filter(pid => H.players[pid]?.name && H.villageOf[pid] == null);
+  if(!newbies.length) return;
+  if(H.phase === "hide"){
+    newbies.forEach(pid => {
+      let k = 0; H.members.forEach((m,i) => { if(m.length < H.members[k].length) k = i; });
+      H.members[k].push(pid); H.villageOf[pid] = k;
+    });
+    H.state.villageOf = H.villageOf;
+    DB.patch(`rooms/${H.code}/state`, { villageOf: H.villageOf });
+    renderHideProgress();
+    return;
+  }
+  // 게임 중: 인원이 가장 적은 마을에 넣고, 닌자는 표창이 안 지나간 칸에 랜덤으로 숨겨요
+  const total = H.cfg.rows.length * H.cfg.cols.length, N = H.cfg.ninjas;
+  const fill = {};
+  newbies.forEach(pid => {
+    const open = H.villages.filter(v => !v.over); if(!open.length) return;
+    let v = open[0]; open.forEach(x => { if(x.members.length < v.members.length) v = x; });
+    const free = shuffle([...Array(total).keys()].filter(i => v.shots["c"+i] == null));
+    const cells = free.slice(0, N);
+    H.hides[pid] = cells; H.alive[pid] = new Set(cells);
+    H.stats[pid] = { kills:0, selfKills:0, lost:0, passes:0, tries:0, scoreSum:0, scoreN:0 };
+    // 지금 차례는 그대로 두고, 순서 맨 끝에 넣어요
+    v.ptr = v.ptr % v.order.length;
+    v.order = v.order.concat(pid); v.members = v.members.concat(pid);
+    H.villageOf[pid] = v.vi;
+    addLog(v, `🆕 ${pname(pid)} 입장 (닌자 ${cells.length}명 랜덤)`);
+    fill[pid] = { cells, ready:true, auto:true, late:true };
+  });
+  if(!Object.keys(fill).length) return;
+  H.state.villageOf = H.villageOf;
+  DB.patch(`rooms/${H.code}/hides`, fill).then(() => {
+    DB.patch(`rooms/${H.code}/state`, { villageOf: H.villageOf });
+    H.villages.forEach(v => DB.put(`rooms/${H.code}/v/${v.vi}`, pubV(v)));
+  });
+  renderVillages();
+}
 function addLog(v, t){ v.log = (v.log || []).concat(t).slice(-6); }
 
 function hostAction(a){
@@ -3535,7 +3587,7 @@ function renderVillages(){
   box.innerHTML = H.villages.map(v => {
     const pid = curPid(v);
     const turn = v.over ? `<b>${esc(v.overReason)}</b>` :
-      `▶ <b>${esc(pname(pid))}</b> · ${v.phase==="row" ? `<span style="color:var(--row)">➡️ 가로줄</span> 고르는 중` : `<span style="color:var(--col)">⬇️ 세로줄</span> 고르는 중 (가로: ${esc(H.cfg.rows[v.selRow]?.label)})`}`;
+      `▶ <b>${esc(pname(pid))}${H.players[pid]?.noVoice ? " 🙋" : ""}</b> · ${v.phase==="row" ? `<span style="color:var(--row)">➡️ 가로줄</span> 고르는 중` : `<span style="color:var(--col)">⬇️ 세로줄</span> 고르는 중 (가로: ${esc(H.cfg.rows[v.selRow]?.label)})`}`;
     return `<div class="vcard ${v.over?'over':''}" id="vcard${v.vi}">
       <h3><span>${vName(v.vi)}</span><span class="hint">${v.members.length}명</span></h3>
       ${boardHTML({ small:true, selRow:v.selRow, cell:i => [shotMark(v.shots, i), v.ev && v.ev.type==="attack" && v.ev.cell===i && fresh(v) ? "boom" : ""] })}
@@ -3738,12 +3790,12 @@ function studentInit(){
 }
 async function studentJoin(){
   const name = $("#sName").value.trim().replace(/\s+/g," ");
-  if(!name) return $("#sJoinErr").textContent = "번호 또는 닉네임을 써 주세요.";
+  if(!name) return $("#sJoinErr").textContent = "이름을 써 주세요. 예) 김민수";
   $("#sJoinBtn").disabled = true; $("#sJoinErr").textContent = "들어가는 중…";
   try{
     const cfg = await DB.get(`rooms/${ROOM}/cfg`);
     if(!cfg){ $("#sJoinErr").textContent = "방이 없어요. 방 번호를 확인해 주세요."; $("#sJoinBtn").disabled = false; return; }
-    const pid = hashName(name);
+    const pid = hashName(name.replace(/\s+/g, "").toLowerCase()); // '김 민수' = '김민수'
     await DB.req("PATCH", `rooms/${ROOM}/players/${pid}`, { name, t: Date.now() });
     S.me = { pid, name };
     store.set("nj-me-" + ROOM, { name });
@@ -3767,6 +3819,7 @@ function studentUpdate(first){
   CFG = room.cfg;
   const st = room.state || { phase:"lobby" };
   VNAMES = st.vNames || null;
+  refreshNV();
   const vi = myVillage();
   const showPick = st.phase === "lobby" && st.groupMode === "group";
   $("#sGroupBox").classList.toggle("hidden", !showPick);
@@ -3786,7 +3839,9 @@ function studentUpdate(first){
   }
   if(vi == null){
     show("sWait");
-    $("#sWaitBox").innerHTML = `<div class="emo">⏳</div>지금 판이 진행 중이에요.<br><span class="hint" style="font-size:18px">다음 판에 함께해요!</span>`;
+    $("#sWaitBox").innerHTML = st.phase === "end"
+      ? `<div class="emo">🏁</div>이번 판이 막 끝났어요.<br><span class="hint" style="font-size:18px">다음 판에 함께해요!</span>`
+      : `<div class="emo">⏳</div>자리를 만드는 중이에요…<br><span class="hint" style="font-size:18px">잠깐만 기다려요. 곧 들어가요!</span>`;
     return;
   }
   if(st.phase === "hide"){
@@ -3805,7 +3860,12 @@ function studentUpdate(first){
     return;
   }
   if(st.phase === "play"){
-    if(S.playId !== st.playId){ S.playId = st.playId; S.gameEnd = Date.now() + (st.gameMs||0); }
+    if(S.playId !== st.playId){ S.playId = st.playId; S.gameEnd = Math.min(Date.now() + (st.gameMs||0), st.endEpoch || Infinity); }
+    const mineH = room.hides && room.hides[S.me.pid];
+    if(mineH && mineH.late && !S.lateShown){
+      S.lateShown = true;
+      setTimeout(() => flash(`🆕 어서 와요!<br><span style="font-size:.45em">내 닌자 ${toArr(mineH.cells).length}명이 랜덤으로 숨었어요. 바로 시작해요!</span>`, "#3ddc97", 2600), 300);
+    }
     setHowto("#sHowto", CFG);
     show("sPlay"); renderSPlay(first);
     return;
@@ -3926,17 +3986,21 @@ function openRead(type, idx){
   $("#readGuide").classList.toggle("hidden", !item.word);
   $("#readHelp").classList.toggle("hidden", !READ.helped);
   $("#listenBtn").classList.toggle("hidden", !(CFG.listen || READ.helped));
-  const manual = CFG.judge === "manual";
-  $("#micBtn").classList.toggle("hidden", manual);
-  $("#manualBtns").classList.toggle("hidden", !manual);
-  $("#fallbackBtns").classList.add("hidden");
-  $("#readMicHelp").classList.add("hidden");
+  applyReadMode();
   $("#readCancel").classList.remove("hidden");
-  $("#heard").textContent = manual ? "소리 내어 읽고, 모둠 친구들이 듣고 판정해요." : "🎤 단추를 누르고 또박또박 읽어요.";
   $("#scoreBox").textContent = ""; $("#scoreBox").className = "score";
   $("#micBtn").classList.remove("on");
   $("#readOv").classList.remove("hidden");
   renderSPlay();
+}
+function applyReadMode(){
+  const manual = CFG.judge === "manual" || noVoice();
+  $("#micBtn").classList.toggle("hidden", manual);
+  $("#manualBtns").classList.toggle("hidden", !manual);
+  $("#fallbackBtns").classList.add("hidden");
+  $("#readMicHelp").classList.add("hidden");
+  $("#heard").textContent = noVoice() && CFG.judge !== "manual" ? "🙋 음성인식 없이 해요. 소리 내어 읽고, 모둠 친구가 듣고 눌러 줘요."
+    : (manual ? "소리 내어 읽고, 모둠 친구들이 듣고 판정해요." : "🎤 단추를 누르고 또박또박 읽어요.");
 }
 function closeRead(){ READ.open = false; $("#readOv").classList.add("hidden"); }
 function stopRec(){ if(READ.rec){ try{ READ.rec.abort(); }catch(e){} READ.rec = null; $("#micBtn").classList.remove("on"); } }
@@ -4029,7 +4093,7 @@ function guideSlides(){
     `<h2>📷 들어오기</h2>
      <div class="gcards">
        <div class="gcard"><span class="e">📷</span><b>QR 찍기</b><br>태블릿 카메라로 TV 화면의 QR을 찍어요. 크롬에서 열면 가장 좋아요.</div>
-       <div class="gcard"><span class="e">✍️</span><b>번호나 닉네임</b><br>예) 7 또는 7 김민수<br>다시 들어올 때 똑같이 쓰면 점수가 이어져요.</div>
+       <div class="gcard"><span class="e">✍️</span><b>이름 쓰기</b><br>이름만 써요. 예) 김민수<br>다시 들어올 때 똑같이 쓰면 점수가 이어져요.</div>
        <div class="gcard"><span class="e">🎤</span><b>마이크 허용</b><br>마이크를 써도 되냐고 물으면 꼭 '허용'을 눌러요.</div>
        <div class="gcard"><span class="e">🧪</span><b>마이크 시험</b><br>기다리는 동안 문장을 읽어 보고 점수가 나오는지 확인해요.</div>
      </div>`,
@@ -4158,11 +4222,37 @@ function showMicTab(t){
   $("#micBody").innerHTML = MIC_HELP[t];
 }
 document.addEventListener("click", e => {
-  if(e.target.closest("[data-michelp]")){ showMicTab(IS_IOS ? "ipad" : "chrome"); $("#micOv").classList.remove("hidden"); }
+  if(e.target.closest("[data-michelp]")){ showMicTab(IS_IOS ? "ipad" : "chrome"); refreshNV(); $("#micOv").classList.remove("hidden"); }
   const tb = e.target.closest("#micTabs [data-mt]"); if(tb) showMicTab(tb.dataset.mt);
 });
 $("#micClose").onclick = () => $("#micOv").classList.add("hidden");
 $("#micReload").onclick = () => location.reload();
+
+/* =====================================================================
+   🙋 음성인식 없이 하기 (이 학생만 친구 판정)
+   ===================================================================== */
+function noVoice(){ return !!(IS_STUDENT && S.me && S.room && S.room.players && S.room.players[S.me.pid] && S.room.players[S.me.pid].noVoice); }
+function refreshNV(){
+  if(!IS_STUDENT) return;
+  const on = noVoice();
+  document.querySelectorAll("[data-nv]").forEach(b => {
+    b.textContent = on ? "🎤 다시 음성인식으로 하기" : (b.closest("#fallbackBtns") ? "🙋 앞으로 음성인식 없이 하기" : "🙋 음성인식 없이 하기");
+  });
+  $("#nvNote").classList.toggle("hidden", !on);
+  $("#nvBox").classList.toggle("hidden", !S.me);
+}
+async function toggleNV(){
+  if(!S.me || !S.room) return;
+  const on = !noVoice();
+  S.room.players = S.room.players || {};
+  S.room.players[S.me.pid] = { ...(S.room.players[S.me.pid] || {}), noVoice: on };
+  refreshNV();
+  if(READ.open && !READ.done){ stopRec(); applyReadMode(); }
+  $("#micOv").classList.add("hidden");
+  flash(on ? "🙋 음성인식 없이 할게요!<br><span style='font-size:.45em'>읽으면 모둠 친구가 ⭕/❌를 눌러 줘요</span>" : "🎤 다시 음성인식으로 해요!", on ? "#3ddc97" : "#4cc3ff", 1800);
+  try{ await DB.req("PATCH", `rooms/${ROOM}/players/${S.me.pid}`, { noVoice: on }); }catch(e){}
+}
+document.addEventListener("click", e => { if(e.target.closest("[data-nv]")) toggleNV(); });
 
 /* ---------- 시작 ---------- */
 if(IS_STUDENT) studentInit(); else hostInit();
