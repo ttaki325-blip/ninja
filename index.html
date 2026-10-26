@@ -385,6 +385,8 @@ tr.me td{background:#3a2d75}
     <input type="text" id="sName" maxlength="12" placeholder="예) 김민수" style="font-size:22px;text-align:center">
     <p class="hint">다시 들어올 때도 똑같이 쓰면 점수가 이어져요.</p>
     <button class="btn primary big" id="sJoinBtn" style="width:100%;margin-top:8px">들어가기</button>
+    <button class="btn go" id="sJoinNV" style="width:100%;margin-top:10px">🙋 음성인식 없이 들어가기</button>
+    <p class="hint" style="margin:6px 0 0">음성인식이 안 되는 친구는 아래 초록 단추로 들어가요. 내 차례에 소리 내어 읽으면 모둠 친구가 ⭕/❌를 눌러 줘요.</p>
     <div class="row center" style="margin-top:12px">
       <button class="btn small" data-guide>📖 활동 방법 보기</button>
       <button class="btn small" data-michelp>🎤 마이크 허용 방법</button>
@@ -434,6 +436,7 @@ tr.me td{background:#3a2d75}
   <div class="topbar">
     <h2 style="margin:0" id="sPlayTitle"></h2>
     <div class="row">
+      <button class="btn small" data-michelp>🎤 마이크 도움</button>
       <span class="clock" id="sAlive"></span>
       <span class="clock" id="sGameClock"></span>
     </div>
@@ -3745,11 +3748,12 @@ function hashName(s){ let h = 2166136261; for(const ch of s){ h ^= ch.codePointA
 
 function studentInit(){
   $("#sRoomCode").textContent = ROOM;
-  if(!DBURL){ show("sJoin"); $("#sJoinErr").textContent = "연결 주소가 없어요. TV의 QR을 다시 찍어 주세요."; $("#sJoinBtn").disabled = true; return; }
+  if(!DBURL){ show("sJoin"); $("#sJoinErr").textContent = "연결 주소가 없어요. TV의 QR을 다시 찍어 주세요."; $("#sJoinBtn").disabled = true; $("#sJoinNV").disabled = true; return; }
   const saved = store.get("nj-me-" + ROOM, null);
   $("#sName").value = saved ? saved.name : "";
   show("sJoin");
-  $("#sJoinBtn").onclick = studentJoin;
+  $("#sJoinBtn").onclick = () => studentJoin(false);
+  $("#sJoinNV").onclick = () => studentJoin(true);
   $("#sGroupBtns").addEventListener("click", async e => {
     const b = e.target.closest("[data-g]"); if(!b || !S.me) return;
     document.querySelectorAll("#sGroupBtns button").forEach(x => x.classList.toggle("on", x === b));
@@ -3757,7 +3761,7 @@ function studentInit(){
     try{ await DB.req("PATCH", `rooms/${ROOM}/players/${S.me.pid}`, { group: +b.dataset.g }); }
     catch(err){ alert("보내지 못했어요. 다시 눌러 주세요."); }
   });
-  $("#sName").addEventListener("keydown", e => { if(e.key === "Enter") studentJoin(); });
+  $("#sName").addEventListener("keydown", e => { if(e.key === "Enter") studentJoin(false); });
   $("#sRandom").onclick = () => { const total = CFG.rows.length*CFG.cols.length; S.cells = new Set(shuffle([...Array(total).keys()]).slice(0, CFG.ninjas)); renderSHide(); };
   $("#sClear").onclick = () => { S.cells.clear(); renderSHide(); };
   $("#sHideDone").onclick = async () => {
@@ -3788,20 +3792,23 @@ function studentInit(){
   };
   setInterval(studentTick, 250);
 }
-async function studentJoin(){
+async function studentJoin(nv){
   const name = $("#sName").value.trim().replace(/\s+/g," ");
   if(!name) return $("#sJoinErr").textContent = "이름을 써 주세요. 예) 김민수";
-  $("#sJoinBtn").disabled = true; $("#sJoinErr").textContent = "들어가는 중…";
+  $("#sJoinBtn").disabled = true; $("#sJoinNV").disabled = true; $("#sJoinErr").textContent = "들어가는 중…";
   try{
     const cfg = await DB.get(`rooms/${ROOM}/cfg`);
-    if(!cfg){ $("#sJoinErr").textContent = "방이 없어요. 방 번호를 확인해 주세요."; $("#sJoinBtn").disabled = false; return; }
+    if(!cfg){ $("#sJoinErr").textContent = "방이 없어요. 방 번호를 확인해 주세요."; $("#sJoinBtn").disabled = false; $("#sJoinNV").disabled = false; return; }
     const pid = hashName(name.replace(/\s+/g, "").toLowerCase()); // '김 민수' = '김민수'
-    await DB.req("PATCH", `rooms/${ROOM}/players/${pid}`, { name, t: Date.now() });
+    const rec = { name, t: Date.now() };
+    if(nv) rec.noVoice = true;   // 🙋 음성인식 없이 들어가기
+    await DB.req("PATCH", `rooms/${ROOM}/players/${pid}`, rec);
     S.me = { pid, name };
+    if(nv) setTimeout(() => flash("🙋 음성인식 없이 해요!<br><span style='font-size:.45em'>읽으면 모둠 친구가 ⭕/❌를 눌러 줘요</span>", "#3ddc97", 2200), 600);
     store.set("nj-me-" + ROOM, { name });
     DB.listen(`rooms/${ROOM}`, (room, first) => { S.room = room; studentUpdate(first); });
   }catch(e){
-    $("#sJoinErr").textContent = "연결하지 못했어요. 와이파이를 확인해 주세요."; $("#sJoinBtn").disabled = false;
+    $("#sJoinErr").textContent = "연결하지 못했어요. 와이파이를 확인해 주세요."; $("#sJoinBtn").disabled = false; $("#sJoinNV").disabled = false;
   }
 }
 
