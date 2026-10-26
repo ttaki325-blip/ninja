@@ -3276,6 +3276,14 @@ function startHost(code, cfg, players, state, totals){
     if(H.phase === "lobby") renderLobby();
     else if(H.phase === "hide" || H.phase === "play") lateJoin();
   });
+  // 💓 접속 확인: 학생 태블릿이 8초마다 신호를 보내요. 25초 넘게 없으면 '나간' 걸로 봐요
+  H.lastSeen = {}; H.hbVal = {}; H.awayKey = "";
+  DB.listen(`rooms/${code}_hb`, m => {
+    const now = Date.now(); m = m || {};
+    for(const pid in m){ if(H.hbVal[pid] !== m[pid]){ H.hbVal[pid] = m[pid]; H.lastSeen[pid] = m[pid] === 0 ? 0 : now; } }
+    checkPresence();
+    if(H.phase === "hide" || H.phase === "play") lateJoin();
+  });
   DB.listen(`rooms/${code}/hides`, m => { H.hidesRaw = m || {}; if(H.phase === "hide"){ renderHideProgress(); checkAllHidden(); } });
   DB.listen(`rooms/${code}/actions`, m => {
     if(!m) return;
@@ -3315,7 +3323,7 @@ const myGroup = (pid) => { const g = +H.players[pid]?.group; return g >= 1 && g 
 function groupVillages(){
   // 모둠 번호 → 마을 (빈 모둠은 건너뛰어요)
   const byG = {};
-  Object.keys(H.players).forEach(pid => { if(!H.players[pid]?.name) return; const g = myGroup(pid); if(g) (byG[g] = byG[g] || []).push(pid); });
+  Object.keys(H.players).forEach(pid => { if(!H.players[pid]?.name || isAway(pid)) return; const g = myGroup(pid); if(g) (byG[g] = byG[g] || []).push(pid); });
   const gs = Object.keys(byG).map(Number).sort((a,b) => a-b);
   const villageOf = {}, names = [];
   gs.forEach((g, i) => { byG[g].forEach(pid => villageOf[pid] = i); names[i] = `${VILLAGES[i%8][0]} ${g}모둠`; });
@@ -3343,7 +3351,7 @@ function renderLobby(){
   $("#gModeHint").textContent = gm
     ? "학생 태블릿에서 모둠 번호를 고르면 그대로 마을이 돼요. 모둠 번호를 안 고른 친구(❔)는 시작할 때 인원이 적은 모둠에 들어가요."
     : "한 마을 4~5명이 좋아요. 마을마다 따로 한 판을 해요.";
-  const ps = Object.entries(H.players).filter(([,p]) => p && p.name).sort((a,b) => String(a[1].name).localeCompare(String(b[1].name), "ko", {numeric:true}));
+  const ps = Object.entries(H.players).filter(([pid,p]) => p && p.name && !isAway(pid)).sort((a,b) => String(a[1].name).localeCompare(String(b[1].name), "ko", {numeric:true}));
   $("#joinCount").textContent = `(${ps.length}명)`;
   $("#joinList").innerHTML = ps.map(([pid,p]) => {
     const badge = gm ? (myGroup(pid) ? `<b style="background:var(--accent2);color:#1a1240;border-radius:8px;padding:0 6px;font-size:13px">${myGroup(pid)}모둠</b>` : "❔") : (H.villageOf[pid]!=null?VILLAGES[H.villageOf[pid]%8][0]:"🆕");
@@ -3371,14 +3379,14 @@ function renderLobby(){
 function villageGroups(){
   const groups = [];
   for(const [pid, vi] of Object.entries(H.villageOf)){
-    if(!H.players[pid]) continue;
+    if(!H.players[pid] || isAway(pid)) continue;
     (groups[vi] = groups[vi] || []).push(pid);
   }
   return groups.map(g => g || []);
 }
 function divideVillages(){
   H.vNames = null; VNAMES = null;
-  const pids = shuffle(Object.keys(H.players).filter(pid => H.players[pid] && H.players[pid].name));
+  const pids = shuffle(Object.keys(H.players).filter(pid => H.players[pid] && H.players[pid].name && !isAway(pid)));
   const n = Math.min(H.vCount, Math.max(1, Math.floor(pids.length/2)));
   H.vCount = n;
   H.villageOf = {};
@@ -3392,7 +3400,7 @@ function startHide(){
   if(H.groupMode === "group"){
     syncGroupVillages();
     const groups0 = villageGroups();
-    Object.keys(H.players).filter(pid => H.players[pid]?.name && H.villageOf[pid] == null).forEach(pid => {
+    Object.keys(H.players).filter(pid => H.players[pid]?.name && H.villageOf[pid] == null && !isAway(pid)).forEach(pid => {
       let k = 0; groups0.forEach((g,i) => { if(g.length < groups0[k].length) k = i; });
       if(!groups0.length) return;
       groups0[k].push(pid); H.villageOf[pid] = k;
@@ -3410,12 +3418,12 @@ function startHide(){
 function renderHideProgress(){
   if(!H.members) return;
   const hr = H.hidesRaw || {};
-  $("#hideList").innerHTML = H.members.map((mem, vi) => `<div class="vbox"><b>${vName(vi)}</b><div>${mem.map(pid => `<span class="chip">${hr[pid]?.ready ? "✅" : "⏳"} ${esc(H.players[pid]?.name)}</span>`).join("")}</div></div>`).join("");
+  $("#hideList").innerHTML = H.members.map((mem, vi) => `<div class="vbox"><b>${vName(vi)}</b><div>${mem.filter(pid => !isAway(pid)).map(pid => `<span class="chip">${hr[pid]?.ready ? "✅" : "⏳"} ${esc(H.players[pid]?.name)}</span>`).join("")}</div></div>`).join("");
 }
 function checkAllHidden(){
   if(H.phase !== "hide") return;
   const hr = H.hidesRaw || {};
-  if(H.members.every(mem => mem.every(pid => hr[pid] && hr[pid].ready))) setTimeout(finishHide, 800);
+  if(H.members.every(mem => mem.every(pid => isAway(pid) || (hr[pid] && hr[pid].ready)))) setTimeout(finishHide, 800);
 }
 async function finishHide(){
   if(H.phase !== "hide") return;
@@ -3459,19 +3467,50 @@ function startPlay(resume){
   setHowto("#tvHowto", H.cfg);
   show("hPlay"); renderVillages();
 }
-function pubV(v){ const { deadline, ...rest } = v; return rest; }
+function isAway(pid){
+  if(!H || !H.lastSeen) return false;
+  const t = H.lastSeen[pid];
+  if(t === undefined) return false;          // 아직 신호를 못 받았으면(예전 버전 등) 있는 걸로 봐요
+  return t === 0 || Date.now() - t > 25000;
+}
+function activeMembers(v){ return v.members.filter(pid => !isAway(pid)); }
+function checkPresence(){
+  if(!H) return;
+  const key = Object.keys(H.players).filter(isAway).sort().join(",");
+  if(key === H.awayKey) return;
+  const before = new Set(H.awayKey ? H.awayKey.split(",") : []);
+  H.awayKey = key;
+  if(H.phase === "lobby") renderLobby();
+  if(H.phase === "hide"){ renderHideProgress(); checkAllHidden(); }
+  if(H.phase === "play"){
+    H.villages.forEach(v => {
+      let changed = false;
+      v.members.forEach(pid => {
+        const a = isAway(pid);
+        if(a && !before.has(pid)){ addLog(v, `👋 ${pname(pid)} 나갔어요`); changed = true; }
+        if(!a && before.has(pid)){ addLog(v, `🔄 ${pname(pid)} 다시 들어왔어요`); changed = true; }
+      });
+      if(!changed) return;
+      if(!v.over && isAway(curPid(v)) && activeMembers(v).length){ newTurn(v, true); }
+      pushV(v);
+    });
+  }
+}
+function pubV(v){ const { deadline, ...rest } = v; return { ...rest, away: v.members.filter(isAway) }; }
 function pushV(v){ DB.put(`rooms/${H.code}/v/${v.vi}`, pubV(v)); renderVillages(); }
 const curPid = v => v.order[v.ptr % v.order.length];
 const pname = pid => H.players[pid]?.name || "?";
 
 function newTurn(v, advance){
   if(advance) v.ptr++;
+  // 나간 친구는 차례를 건너뛰어요
+  for(let k = 0; k < v.order.length && isAway(curPid(v)) && activeMembers(v).length; k++) v.ptr++;
   v.turnId = rid();
   v.deadline = Date.now() + (H.cfg.turnSec + 4)*1000; // 배너 보는 시간 포함
 }
 /* ---------- 늦게 온(튕긴) 친구: 진행 중인 판에 바로 넣어요 ---------- */
 function lateJoin(){
-  const newbies = Object.keys(H.players).filter(pid => H.players[pid]?.name && H.villageOf[pid] == null);
+  const newbies = Object.keys(H.players).filter(pid => H.players[pid]?.name && H.villageOf[pid] == null && !isAway(pid));
   if(!newbies.length) return;
   if(H.phase === "hide"){
     newbies.forEach(pid => {
@@ -3567,6 +3606,7 @@ function hostTimeout(v){
 function hostTick(){
   if(!H) return;
   const now = Date.now();
+  if(H.phase === "lobby" || H.phase === "hide") checkPresence();
   if(H.phase === "hide"){
     const left = H.hideDeadline - now;
     $("#hideClock").textContent = `⏱ ${Math.max(0, Math.ceil(left/1000))}초`;
@@ -3577,7 +3617,8 @@ function hostTick(){
     $("#gameClock").textContent = `⏰ ${mmss(left)}`;
     $("#gameClock").classList.toggle("warn", left < 60000);
     if(left <= 0) return endRound("⏰ 시간이 다 됐어요!");
-    H.villages.forEach(v => { if(!v.over && now > v.deadline) hostTimeout(v); });
+    checkPresence();
+    H.villages.forEach(v => { if(!v.over && now > v.deadline && activeMembers(v).length) hostTimeout(v); });
     H.villages.forEach(v => {
       const bar = document.querySelector(`#vbar${v.vi}`); if(!bar) return;
       const pct = Math.max(0, Math.min(100, (v.deadline - now) / ((H.cfg.turnSec+4)*1000) * 100));
@@ -3592,7 +3633,7 @@ function renderVillages(){
     const turn = v.over ? `<b>${esc(v.overReason)}</b>` :
       `▶ <b>${esc(pname(pid))}${H.players[pid]?.noVoice ? " 🙋" : ""}</b> · ${v.phase==="row" ? `<span style="color:var(--row)">➡️ 가로줄</span> 고르는 중` : `<span style="color:var(--col)">⬇️ 세로줄</span> 고르는 중 (가로: ${esc(H.cfg.rows[v.selRow]?.label)})`}`;
     return `<div class="vcard ${v.over?'over':''}" id="vcard${v.vi}">
-      <h3><span>${vName(v.vi)}</span><span class="hint">${v.members.length}명</span></h3>
+      <h3><span>${vName(v.vi)}</span><span class="hint">${activeMembers(v).length}명</span></h3>
       ${boardHTML({ small:true, selRow:v.selRow, cell:i => [shotMark(v.shots, i), v.ev && v.ev.type==="attack" && v.ev.cell===i && fresh(v) ? "boom" : ""] })}
       <div class="vturn">${turn}</div>
       <div class="tbar"><div id="vbar${v.vi}"></div></div>
@@ -3634,7 +3675,7 @@ function evText(ev, nameOf){
 async function endRound(reason){
   if(H.phase !== "play") return;
   H.phase = "end";
-  const all = H.villages.flatMap(v => v.members.map(pid => ({ pid, vi: v.vi })));
+  const all = H.villages.flatMap(v => v.members.filter(pid => !isAway(pid)).map(pid => ({ pid, vi: v.vi })));
   const N = H.cfg.ninjas;
   const rows = all.map(({pid, vi}) => {
     const s = H.stats[pid], alive = H.alive[pid].size;
@@ -3703,7 +3744,7 @@ function awardsHTML(aw){ return (aw||[]).map(a => `<div class="award"><b>${a[0]}
 
 async function closeRoom(){
   if(!confirm("방을 닫을까요? 학생들의 연결이 끊어지고 기록이 지워져요.")) return;
-  await DB.del(`rooms/${H.code}`);
+  await DB.del(`rooms/${H.code}`); DB.del(`rooms/${H.code}_hb`);
   store.del("nj-host");
   location.reload();
 }
@@ -3744,6 +3785,14 @@ async function hostResume(code){
 const S = { me: null, room: null, cells: new Set(), hideId: null, hideEnd: 0, hideSent: false,
             lastTurnId: null, turnStart: 0, lastEvId: null, playId: null, gameEnd: 0, vKey: null };
 
+function startHeartbeat(){
+  const url = () => DB.u(`rooms/${ROOM}_hb/${S.me.pid}`);
+  const beat = () => fetch(url(), { method:"PUT", body: JSON.stringify(Date.now()) }).catch(() => {});
+  clearInterval(S.hbTimer); beat(); S.hbTimer = setInterval(beat, 8000);
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) beat(); });
+  // 창을 닫거나 다른 페이지로 가면 바로 '나감'으로 알려요
+  window.addEventListener("pagehide", () => { try{ fetch(url(), { method:"PUT", body:"0", keepalive:true }); }catch(e){} });
+}
 function hashName(s){ let h = 2166136261; for(const ch of s){ h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return "p" + (h >>> 0).toString(36); }
 
 function studentInit(){
@@ -3804,6 +3853,7 @@ async function studentJoin(nv){
     if(nv) rec.noVoice = true;   // 🙋 음성인식 없이 들어가기
     await DB.req("PATCH", `rooms/${ROOM}/players/${pid}`, rec);
     S.me = { pid, name };
+    startHeartbeat();
     if(nv) setTimeout(() => flash("🙋 음성인식 없이 해요!<br><span style='font-size:.45em'>읽으면 모둠 친구가 ⭕/❌를 눌러 줘요</span>", "#3ddc97", 2200), 600);
     store.set("nj-me-" + ROOM, { name });
     DB.listen(`rooms/${ROOM}`, (room, first) => { S.room = room; studentUpdate(first); });
@@ -3901,8 +3951,11 @@ function renderSPlay(first){
   const v = S.room.v && S.room.v[vi];
   if(!v){ $("#sTurnName").textContent = "준비 중…"; return; }
   const order = toArr(v.order), players = S.room.players || {};
+  const awaySet = new Set(toArr(v.away));
   const nm = pid => players[pid]?.name || "?";
   const cur = order[(v.ptr||0) % order.length];
+  let nextK = (v.ptr||0) % order.length;
+  for(let k = 1; k <= order.length; k++){ const j = ((v.ptr||0) + k) % order.length; if(!awaySet.has(order[j])){ nextK = j; break; } }
   const mine = !v.over && cur === S.me.pid;
   const myCells = toArr(S.room.hides?.[S.me.pid]?.cells).map(Number);
   const shots = v.shots || {};
@@ -3942,13 +3995,14 @@ function renderSPlay(first){
     $("#sTurnWhat").innerHTML = (v.phase === "row" ? `<b style="color:var(--row)">➡️ 가로줄</b>을 골라 읽어요` : `<b style="color:var(--col)">⬇️ 세로줄</b>을 골라 읽어요 · 가로줄은 <b style="color:var(--row)">${esc(CFG.rows[selRow]?.label)}</b>`) + (helped ? " · 🍀 도움 찬스" : "") +
       `<br><span class="hint">🙅 내 닌자가 있는 줄은 피해요!</span>`;
   } else {
-    const nextIsMe = order[((v.ptr||0)+1) % order.length] === S.me.pid;
+    const nextIsMe = order[nextK] === S.me.pid;
     $("#sTurnName").textContent = `⏳ ${nm(cur)} 차례`;
     $("#sTurnWhat").innerHTML = (v.phase === "row" ? `<b style="color:var(--row)">➡️ 가로줄</b> 고르는 중` : `<b style="color:var(--col)">⬇️ 세로줄</b> 고르는 중 · 가로줄 <b style="color:var(--row)">${esc(CFG.rows[selRow]?.label)}</b>`) +
       (nextIsMe ? `<br><b style="color:var(--accent2)">다음은 내 차례! 어느 줄을 고를지 미리 정해 둬요.</b>` : `<br><span class="hint">🤫 친구가 읽을 때는 조용히! 속으로 같이 읽어요.</span>`);
   }
   $("#sOrder").innerHTML = order.map((pid,k) => {
-    const cls = v.over ? "" : (k === (v.ptr||0) % order.length ? "now" : (k === ((v.ptr||0)+1) % order.length ? "next" : ""));
+    if(awaySet.has(pid) && pid !== S.me.pid) return "";   // 나간 친구는 안 보여요
+    const cls = v.over ? "" : (k === (v.ptr||0) % order.length ? "now" : (k === nextK ? "next" : ""));
     return `<span class="${cls} ${pid===S.me.pid?'me':''}">${esc(nm(pid))}</span>`;
   }).join("");
   const canRow = mine && v.phase === "row" && !READ.open;
